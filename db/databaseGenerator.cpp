@@ -32,10 +32,11 @@ CvRect box;
 bool drawing_box = false;
 bool drawing_arrow = false;
 bool arrow_drawed = false;
-bool point_saved = false;
+bool box_drawed = false;
+
 
 Mat Image;
-Mat ImageRect;
+Mat ImageObj;
 Mat temp;
 Mat croppedImage;
 Mat OriImage;
@@ -48,12 +49,17 @@ struct TrayPoint{
 	Point Pos;
 	float angle;
 };
-
+struct LabelProps{
+	int x;
+	int y;
+	int width;
+	int height;
+	double angle;
+};
 
 // dibujar rectangulo en la imagen
-void draw_box( Mat img, CvRect rect ) {
-
-	  rectangle (img, cvPoint(box.x,box.y),cvPoint(box.x+box.width,box.y+box.height), Scalar(0,255,255));
+void draw_box(Mat img, CvRect rect) {
+	  rectangle(img, cvPoint(box.x,box.y),cvPoint(box.x+box.width,box.y+box.height), Scalar(0,255,255));
 
 	}
 
@@ -202,10 +208,9 @@ int main( int argc, char* argv[] ) {
 
 	string images_dir = case_dir+"images/";
 	string angles_path = case_dir+"angles/"+video_name+".dat";
-	string cascade_path = case_dir+"cascades/"+video_name+".dat";
+	string cascades_path = case_dir+"cascades/"+video_name+".dat";
 
-	vector<Point> origin;
-	vector<Point> tam;
+	vector<LabelProps> vObj;
 
 
 	//inicializacion trayectorias
@@ -217,24 +222,17 @@ int main( int argc, char* argv[] ) {
 	puntotray.frame = -1;
 	puntotray.angle = 0.0;
 
-	vector<double> angles;
-
-	Point orig (-1,-1);
-	Point siz (0,0);
-
 	float deltax=0;
 	float deltay=0;
 	double theta1=0;
 
-
+	/*
+	//contar imagenes del directorio de imagenes
 	int cimagesp = 0;
-
-	//contar cuantas imagenes existen en el directorio
-
-	/* Con un puntero a DIR abriremos el directorio */
+	//Con un puntero a DIR abriremos el directorio
 	DIR* dp = opendir(images_dir.c_str());
 
-	/* en *ent habrá información sobre el archivo que se está "sacando" a cada momento */
+	// en *ent habrá información sobre el archivo que se está "sacando" a cada momento
 	struct dirent *ent;
 
 	 if (dp == NULL){
@@ -242,10 +240,9 @@ int main( int argc, char* argv[] ) {
 		return -1;
 	 }
 
-
 	 while ((ent = readdir (dp)) != NULL)
 		 {
-		   /* Nos devolverá el directorio actual (.) y el anterior (..), como hace ls */
+		   //Nos devolverá el directorio actual (.) y el anterior (..), como hace ls
 		   if ( (strcmp(ent->d_name, ".")!=0) && (strcmp(ent->d_name, "..")!=0) )
 		 {
 		   cimagesp++;
@@ -254,22 +251,17 @@ int main( int argc, char* argv[] ) {
 
 	 closedir (dp);
 
-	//cout<< "numero de imagenes en el directorio "<< cimagesp <<endl;
+	//cout<< "numero de imagenes en el directorio "<< cimagesp <<endl;*/
+
+	fstream fd_angles(angles_path.c_str(), std::ios::out | std::ios::app);
+	fstream fd_cascades(cascades_path.c_str(), std::ios::out | std::ios::app);
 
 
-	int objects = 0;
-
-	fstream anglesFile, cascadeFile;
-	anglesFile.open(angles_path.c_str(), std::ios::out | std::ios::app);
-	cascadeFile.open(cascade_path.c_str(), std::ios::out | std::ios::app);
-
-
-	if (!anglesFile.is_open()){
-
+	if (!fd_angles.is_open()){
 		cout <<"no se ha podido abrir el archivo de datos 1"<<endl;
 		return -1;
 	}
-	if(!cascadeFile.is_open()){
+	if(!fd_cascades.is_open()){
 		cout <<"no se ha podido abrir el archivo de datos 2"<<endl;
 		return -1;
 	}
@@ -291,11 +283,9 @@ int main( int argc, char* argv[] ) {
 		}
 	}
 
-    ImageRect = Image.clone(); //Imagen con el ultimo rectangulo dibujado
-
-    OriImage = Image.clone(); //imagen original
-
-	temp = ImageRect.clone(); // imagen con los rectangulos temporales y finales
+    ImageObj = Image.clone(); //Imagen con el ultimo rectangulo dibujado
+    OriImage = Image.clone(); //Imagen original
+	temp = ImageObj.clone(); //Imagen con los rectangulos temporales y finales
 
 	namedWindow( "image" );
 
@@ -304,12 +294,18 @@ int main( int argc, char* argv[] ) {
 	stringstream ruta;
 
     cout<<"inicio del programa"<<endl;
-	
+	bool point_saved = false;
+	bool press_space = false;
+	bool obj_done = false;
+	bool obj_start = true;
+
+	LabelProps obj;
+
     while(1) {
 
         temp = Image.clone();
 
-		if(drawing_box) draw_box( temp, box );
+		if(drawing_box) draw_box(temp, box);
 
 		if(drawing_arrow) draw_arrow(temp,ar_ori,ar_end);
 
@@ -317,7 +313,7 @@ int main( int argc, char* argv[] ) {
 
 		char c = waitKey(1);
 		switch (c){
-			case 27: {// esc
+			case 27:// esc
 				cout<<endl<<"programa cerrado manualmente"<<endl;
 				if(!VTrayectoria.empty()) VTrayectorias.push_back(VTrayectoria);
 				if(!VTrayectorias.empty()){
@@ -327,206 +323,237 @@ int main( int argc, char* argv[] ) {
 					if(!saveRoutes(VTrayectorias, case_dir, video_name)){
 						return -1;
 					}
-					cascadeFile.close();
-					anglesFile.close();
+					fd_cascades.close();
+					fd_angles.close();
 					//destroyWindow("image");
 					//Salir del programa
 				}
 				return 0;
-			}
 			break;
-			case 32: {//espacio
+
+
+			case 113://Q reset current objects
 				if(!point_saved){
+					vObj.clear();
+					Image=OriImage.clone();
+					box_drawed = false;
+					arrow_drawed = false;
+					obj_done=true;
+					obj_start=true;
+					cout<<"frame "<<nframe<<" RESET all labels"<<endl;
 					setMouseCallback("image",NULL,NULL);
-					drawing_arrow=false;
-					arrow_drawed=false;
-					setMouseCallback("image", my_mouse_callback_box );
+					setMouseCallback("image", my_mouse_callback_box);
+				}else{
+					cout<<"You have already saved the point you'll have to delete it manually"<<endl;
+					setMouseCallback("image",NULL,NULL);
+					setMouseCallback("image", my_mouse_callback_box);
 				}
 
-				if(objects > 0 && point_saved){
+			break;
+
+
+			case 32://espacio
+				if(!point_saved && !drawing_arrow && !drawing_box){ //Restart drawing box
+					setMouseCallback("image",NULL,NULL);
+					setMouseCallback("image", my_mouse_callback_box);
+					box_drawed=false;
+					Image=ImageObj.clone();
+				}
+
+				if(point_saved){
 					cout<<"frame "<<nframe<<" OK"<<endl;
 					ruta <<images_dir<<nframe<<"_"<<video_name<<".png"; //ruta para guardar la imagen
 
 					imwrite(ruta.str(), OriImage);
 
-					ruta<<" "<<objects;
+					ruta<<" "<<vObj.size();
 
 					//Escribir los datos en el fichero
-					for (int i=0; i< objects; i++){
-						ruta <<" "<<origin[i].x<<" "<<origin[i].y<<" "<<tam[i].x<<" "<<tam[i].y;
+					for (uint i=0; i<vObj.size(); i++){
+						ruta <<" "<<vObj[i].x<<" "<<vObj[i].y<<" "<<vObj[i].width<<" "<<vObj[i].height;
 					}
 
 					//datos para entrenamiento de cascade
-					cascadeFile << ruta.str() <<endl;
+					fd_cascades << ruta.str() <<endl;
 
+					ruta<<" angles";
 
-					if(!angles.empty()){
-						ruta<<" angles";
-
-						for (int i=0; i<objects; i++){
-							ruta<<" "<<angles[i];
-						}
+					for (uint i=0; i<vObj.size(); i++){
+						ruta<<" "<<vObj[i].angle;
 					}
+					
 
-					anglesFile << ruta.str() << endl;
+					fd_angles << ruta.str() << endl;
 
 					ruta.str("");
-				}else{
-					cout<<"frame "<<nframe<<" NOT LABELED"<<endl;
 				}
 
 				//pasar a la siguiente imagen
 
 				//leer frame
-				if(!(video.read(Image))){
-					cout << "fin de la secuencia" << endl;
-					//añadir ultima trayectoria
-					VTrayectorias.push_back(VTrayectoria);
-					if(!VTrayectorias.empty()){ 
-						//guardar trayectorias
+				if(point_saved || press_space){
+					if(!(video.read(Image))){//End of video, time to save routes
+						cout << "fin de la secuencia" << endl;
+						VTrayectorias.push_back(VTrayectoria);
 						cout<<"guardando trayectorias"<<endl;
 						if(!saveRoutes(VTrayectorias, case_dir, video_name)){
 							return -1;
 						}
+
+					}else{//New img
+						ImageObj = Image.clone();
+						OriImage = Image.clone();
+						arrow_drawed=false;
+						box_drawed=false;
+						obj_done=false;
+						obj_start=true;
+						if(point_saved){
+							press_space=false;
+							point_saved = false;
+						}else cout<<"frame "<<nframe<<" NOT LABELED"<<endl;
+						vObj.clear();
+						nframe++;
+						setMouseCallback("image",NULL,NULL);
+						setMouseCallback("image", my_mouse_callback_box);
 					}
-					return -1;
+				}else{
+					if(press_space==false){
+						cout<<"Are you sure you don't want to label this image?  [space again]"<<endl;
+						press_space = true;
+					}
 				}
-
-				ImageRect = Image.clone();
-				OriImage = Image.clone();
-				objects = 0;
-				tam.clear();
-				origin.clear();
-				angles.clear();
-				nframe++;
-			}
 			break;
-			case 100: { //D
 
+
+			case 100: //D
 				//borrar ultimo rectangulo hecho
-				Image = ImageRect.clone();
+				Image = ImageObj.clone();
 
-
-			}
 			break;
-			case 112 : { //P
-				if(!drawing_arrow && !arrow_drawed && !drawing_box){
-					// imagen positiva
-					draw_box(ImageRect,box);
 
-					Image = ImageRect.clone();
 
-					//añadir rectangulo
-					objects ++;
+			case 112 : //P
+				if(!point_saved){
+					if(!drawing_arrow && !arrow_drawed && (obj_done || obj_start)){
+						if(!drawing_box && box_drawed){
+							obj_done=false;
+							obj_start=false;
+							arrow_drawed = false;
+							// imagen positiva
+							draw_box(ImageObj,box);
 
-					orig.x = box.x;
-					orig.y = box.y;
+							Image = ImageObj.clone();
 
-					siz.x = box.width;
-					siz.y = box.height;
+							//añadir rectangulo
+							obj.x = box.x;
+							obj.y = box.y;
 
-					origin.push_back(orig);
-					tam.push_back(siz);
+							obj.width = box.width;
+							obj.height = box.height;
 
-					//dibujar flecha
+							
+							setMouseCallback("image",NULL,NULL);
+							
+							//poder dibujar flechas
 
-					//anular dibujar cajas
-					setMouseCallback("image",NULL,NULL);
-					//poder dibujar flechas
-
-					//origen de la flecha -- centro del rectangulo
-					ar_ori.x = (orig.x + (siz.x /2) );
-					ar_ori.y = (orig.y + (siz.y /2) );
-					ar_end.x = (orig.x + (siz.x /2) );
-					ar_end.y = (orig.y + (siz.y /2) );
-
-					setMouseCallback("image",my_mouse_callback_arrow);
-
-					drawing_arrow=true;
-				}else{
-					cout<<"You have to draw an arrow"<<endl;
-				}
-			}
+							//origen de la flecha -- centro del rectangulo
+							ar_ori.x = obj.x + obj.width /2;
+							ar_ori.y = obj.y + obj.height/2;
+							ar_end.x = obj.x + obj.width /2;
+							ar_end.y = obj.y + obj.height/2;
+							//dibujar flecha
+							setMouseCallback("image",my_mouse_callback_arrow);
+							drawing_arrow=true;
+						}else cout<<"Draw box first"<<endl;
+					}else cout<<"Draw arrow first"<<endl;
+				}else cout<<"You have saved the point, press space for an other frame"<<endl;
 			break;
+
+
 			case 110:  //n
-				if(arrow_drawed){
-					//desactivar flecha
-					setMouseCallback("image",NULL,NULL);
+				if(!point_saved){
+					if(!obj_done && !obj_start){
+						if(arrow_drawed){
+							//desactivar flecha
+							setMouseCallback("image",NULL,NULL);
 
-					//guardar flecha
-					draw_arrow(ImageRect,ar_ori,ar_end);
+							//guardar flecha
+							draw_arrow(ImageObj,ar_ori,ar_end);
 
-					Image = ImageRect.clone();
+							Image = ImageObj.clone();
 
-					drawing_arrow = false;
-					//calcular angulo y guardar el angulo
+							drawing_arrow = false;
+							//calcular angulo y guardar el angulo
 
-					deltax = ar_end.x - ar_ori.x;
-					deltay = ar_ori.y - ar_end.y;
+							deltax = ar_end.x - ar_ori.x;
+							deltay = ar_ori.y - ar_end.y;
 
-					if(deltax == 0){
-						if(deltay>0)
-							 theta1 = 90;
-						else
-							theta1 = 270;
-					}else{
-						//param = (deltay/deltax);
-						theta1 = atan2(deltay,deltax) * (180.0 / PI);
-					}
+							if(deltax == 0){
+								if(deltay>0)
+									 theta1 = 90;
+								else
+									theta1 = 270;
+							}else{
+								//param = (deltay/deltax);
+								theta1 = atan2(deltay,deltax) * (180.0 / PI);
+							}
 
 
-					if(theta1 < 0 ) theta1=360-(-1*theta1);
+							if(theta1 < 0 ) theta1=360-(-1*theta1);
 
-					//cout <<"angulo de la cabeza "<< round(theta1)<<endl;
+							//cout <<"angulo de la cabeza "<< round(theta1)<<endl;
 
-					angles.push_back(round(theta1));
+							obj.angle = round(theta1);
+							vObj.push_back(obj);
 
-					//guardar datos para las trayectorias
-					puntotray.Pos = ar_ori;
-					puntotray.angle = round(theta1);
-					puntotray.frame = nframe;
-					//reestablecer valores
-					ar_ori.x=-1;
-					ar_ori.y=-1;
-					ar_end.x=-1;
-					ar_end.y=-1;
-
-				}else{
-					cout<<"Draw arrow first"<<endl;
-				}
+							//guardar datos para las trayectorias
+							puntotray.Pos = ar_ori;
+							puntotray.angle = round(theta1);
+							puntotray.frame = nframe;
+							cout<<"frame "<<nframe<<" label "<<vObj.size()<<endl;
+							setMouseCallback("image",NULL,NULL);
+							setMouseCallback("image", my_mouse_callback_box);
+							obj_done=true;
+						}else cout<<"Draw arrow first"<<endl;
+					}else cout<<"Draw box first"<<endl;
+				}else cout<<"You have saved the point, press space for an other frame"<<endl;
 			break;
+
+
 			case 116://t Generar nueva trayectoria
-				if(arrow_drawed && !point_saved){
-					if(!VTrayectoria.empty()){
-						cout<<"Are you sure you want to add new route?  [press t again]"<<endl;
-						char op;
-						cin>>op;
-						if(op=='t'){
-							//añadir ruta guardada
-							VTrayectorias.push_back(VTrayectoria);
-							//borrar la ruta
-						    VTrayectoria.clear();
-						    //generar la ruta con el punto nuevo
-						    VTrayectoria.push_back(puntotray);
-						    point_saved=true;
+				if(!point_saved){
+					if(obj_done){
+						if(!VTrayectoria.empty()){
+							cout<<"Are you sure you want to add new route?  [press t again]"<<endl;
+							char op;
+							cin>>op;
+							if(op=='t'){
+								//añadir ruta guardada
+								VTrayectorias.push_back(VTrayectoria);
+								//borrar la ruta
+							    VTrayectoria.clear();
+							    //generar la ruta con el punto nuevo
+							    VTrayectoria.push_back(puntotray);
+							    point_saved=true;
+							}else{
+								cout<<"Cancelled new route"<<endl;
+							}
 						}else{
-							cout<<"Cancelled new route"<<endl;
+							cout<<"Cancelled new route (Your route has no points)"<<endl;
 						}
-					}else{
-						cout<<"Cancelled new route (Your route has no points)"<<endl;
-					}
-				}else{
-					cout<<"Draw arrow first"<<endl;
-				}
+					}else cout<<"Uncompleted label"<<endl;
+				}else cout<<"You have already saved the point, press space for an other frame"<<endl;
 			break;
+
+
 			case 114://r almacenar puntos de la trayectoria
-				if(arrow_drawed && !point_saved){
-				//despues de guardar la flecha
-				VTrayectoria.push_back(puntotray);
-				point_saved=true;
-				}else{
-					cout<<"Draw arrow first"<<endl;
-				}
+				if(!point_saved){
+					if(obj_done){
+						//despues de guardar la flecha
+						VTrayectoria.push_back(puntotray);
+						point_saved=true;
+					}else cout<<"Uncompleted label"<<endl;
+				}else cout<<"You have already saved the point, press space for an other frame"<<endl;
 			break;
 		}
 	}
@@ -536,57 +563,56 @@ int main( int argc, char* argv[] ) {
 void my_mouse_callback_box( int event, int x, int y, int flags, void* param )
     {
 
-		switch( event ) {
-			case CV_EVENT_MOUSEMOVE: {
-				if(drawing_box) {
+		switch(event) {
+			case CV_EVENT_MOUSEMOVE:
+				if(drawing_box){
 					box.width = x-box.x;
 					box.height = y-box.y;
 				}
-			}
 			break;
-			case CV_EVENT_LBUTTONDOWN: {
-				drawing_box = true;
+			case CV_EVENT_LBUTTONDOWN:
+				if(!drawing_box) drawing_box = true;
+				box_drawed = false;
+				arrow_drawed = false;
 				box = cvRect(x, y, 0, 0);
-				}
 			break;
-			case CV_EVENT_LBUTTONUP: {
+			case CV_EVENT_LBUTTONUP:
 				drawing_box = false;
-				if(box.width<0) {
+				if(box.width<0){
 					box.x+=box.width;
 					box.width *=-1;
 				}
-				if(box.height<0) {
+				if(box.height<0){
 					box.y+=box.height;
 					box.height*=-1;
 				}
 
+				box_drawed=true;
 				draw_box(Image,box);
-				}
 			break;
 		}
 	}
 
-void my_mouse_callback_arrow( int event, int x, int y, int flags, void* param )
-    {
+void my_mouse_callback_arrow( int event, int x, int y, int flags, void* param ){
 
 		switch(event) {
+			case CV_EVENT_MOUSEMOVE:
+				if(drawing_arrow){
+					ar_end.x=x;
+					ar_end.y=y;
+				}
+			break;
+			case CV_EVENT_LBUTTONDOWN:
+				if(!drawing_arrow) drawing_arrow=true;
+				ar_end.x=x;
+				ar_end.y=y;
+			break;
 			case CV_EVENT_LBUTTONUP:
 				drawing_arrow=false;
 				ar_end.x=x;
 				ar_end.y=y;
 				draw_arrow(Image,ar_ori,ar_end);
 				arrow_drawed=true;
-			break;
-
-			case CV_EVENT_MOUSEMOVE:
-				if(drawing_arrow) {
-					ar_end.x=x;
-					ar_end.y=y;
-				}
-			break;
-
-			case CV_EVENT_LBUTTONDOWN:
-				if(!drawing_arrow) drawing_arrow=true;
 			break;
 		}
 	}
