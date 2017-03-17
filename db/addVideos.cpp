@@ -190,8 +190,8 @@ bool saveCascadeAngles(bf::path saveCasAngPath){
 }
 
 int main( int argc, char* argv[] ) {
-	string seq_name, vid_file, pack_name; 
-	string vid_dir = "../../videos/", seq_dir = "/home/ivan/local/videos/sequences/", pack_dir = "./";
+	string seq_name, vid_file, pack_name, vid_name;
+	string vid_dir = "../../videos/", seq_dir = "/home/ivan/videos/sequences/", pack_dir = "./";
 	vector<Mat> video;
 	VideoCapture vCapt;
 	char op;
@@ -288,8 +288,10 @@ int main( int argc, char* argv[] ) {
 			
 
 			case 'a'://A (add new video)
-				string vid_name;
+				vid_name="";
+				vid_file="";
 				cout<<"Introduce the name of the videoFile you want to add"<<endl;
+				cin.clear();
 				cin.ignore();
 				getline(cin,vid_file);
 				if(vCapt.isOpened()) vCapt.release();
