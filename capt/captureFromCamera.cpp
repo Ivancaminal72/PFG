@@ -39,7 +39,7 @@ Size size1 = Size(
 
 namedWindow(modelName, CV_WINDOW_AUTOSIZE );
 VideoWriter writerUnDistorted, writerOriginal; 
-writerOriginal = VideoWriter("/home/ivan/Dropbox/1-UPC/ivan-PFG/ivan/videos/" + modelName + "_original.AVI",CV_FOURCC('M','P','4','3'),25,size1,true);
+writerOriginal = VideoWriter("/home/ivan/videos/" + modelName + "_original.AVI",CV_FOURCC('M','P','4','3'),25,size1,true);
 
 if(!cameraCalibrationFile.empty()){
   FileStorage fs(cameraCalibrationFile, FileStorage::READ); // Read the calibration values
@@ -52,7 +52,7 @@ if(!cameraCalibrationFile.empty()){
     fs["Camera_Matrix"] >> cameraMatrix;
     fs["Distortion_Coefficients"] >> distCoeffs;
     fs.release();
-    writerUnDistorted = VideoWriter("/home/ivan/Dropbox/1-UPC/ivan-PFG/ivan/videos/" + modelName + "_undistorted.AVI",CV_FOURCC('M','P','4','3'),25,size1,true);                                        
+    writerUnDistorted = VideoWriter("/home/ivan/videos/" + modelName + "_undistorted.AVI",CV_FOURCC('M','P','4','3'),25,size1,true);                                        
 }
 
 
