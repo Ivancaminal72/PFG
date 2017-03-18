@@ -34,9 +34,7 @@ bool arrow_drawed = false;
 bool box_drawed = false;
 
 
-Mat Image;
-Mat ImageObj;
-Mat temp;
+Mat Image, ImageObj, ImageRect, temp;
 Mat croppedImage;
 Mat OriImage;
 Mat cpIbyn;
@@ -318,9 +316,8 @@ int main( int argc, char* argv[] ) {
 		}
 	}
 
-    ImageObj = Image.clone(); //Imagen con el ultimo rectangulo dibujado
-    OriImage = Image.clone(); //Imagen original
-	temp = ImageObj.clone(); //Imagen con los rectangulos temporales y finales
+    OriImage = Image.clone(); //Original image
+    ImageObj = Image.clone(); //Image with current objects
 
 	namedWindow( "image" );
 
@@ -371,15 +368,16 @@ int main( int argc, char* argv[] ) {
 				if(!point_saved){
 					vObj.clear();
 					Image=OriImage.clone();
-					box_drawed = false;
+					ImageObj=OriImage.clone();
+					ImageRect=OriImage.clone();
 					arrow_drawed = false;
-					obj_done=true;
+					obj_done=false;
 					obj_start=true;
 					cout<<"frame "<<nframe<<" RESET all labels"<<endl;
 					setMouseCallback("image",NULL,NULL);
 					setMouseCallback("image", my_mouse_callback_box);
 				}else{
-					cout<<"You have already saved the point you'll have to delete it manually"<<endl;
+					cout<<"You have already saved objects, you'll have to do it manually"<<endl;
 					setMouseCallback("image",NULL,NULL);
 					setMouseCallback("image", my_mouse_callback_box);
 				}
@@ -389,9 +387,10 @@ int main( int argc, char* argv[] ) {
 
 			case 32://espacio
 				if(!point_saved && !drawing_arrow && !drawing_box){ //Restart drawing box
+					cout<<"You haven't saved current objects yet"<<endl;
 					setMouseCallback("image",NULL,NULL);
 					setMouseCallback("image", my_mouse_callback_box);
-					box_drawed=false;
+					ImageRect=ImageObj.clone();
 					Image=ImageObj.clone();
 				}
 
@@ -438,6 +437,7 @@ int main( int argc, char* argv[] ) {
 					}else{//New img
 						ImageObj = Image.clone();
 						OriImage = Image.clone();
+						ImageRect = Image.clone();
 						arrow_drawed=false;
 						box_drawed=false;
 						obj_done=false;
@@ -461,9 +461,13 @@ int main( int argc, char* argv[] ) {
 
 
 			case 100: //D
-				//borrar ultimo rectangulo hecho
-				Image = ImageObj.clone();
-
+				if(!point_saved){
+					if(obj_done || obj_start) { //delete last box
+						ImageRect = ImageObj.clone();
+						Image = ImageObj.clone();
+					}else Image = ImageRect.clone();
+				}else cout<<"Can't delete, you're not drawing any object"<<endl;
+				
 			break;
 
 
@@ -475,9 +479,8 @@ int main( int argc, char* argv[] ) {
 							obj_start=false;
 							arrow_drawed = false;
 							// imagen positiva
-							draw_box(ImageObj,box);
-
-							Image = ImageObj.clone();
+							draw_box(ImageRect,box);
+							Image = ImageRect.clone();
 
 							//añadir rectangulo
 							obj.x = box.x;
@@ -501,23 +504,22 @@ int main( int argc, char* argv[] ) {
 							drawing_arrow=true;
 						}else cout<<"Draw box first"<<endl;
 					}else cout<<"Draw arrow first"<<endl;
-				}else cout<<"You have saved the point, press space for an other frame"<<endl;
+				}else cout<<"You have saved the objects, press space for an other frame"<<endl;
 			break;
 
 
 			case 110:  //n
 				if(!point_saved){
 					if(!obj_done && !obj_start){
-						if(arrow_drawed){
+						if(arrow_drawed && !drawing_arrow){
 							//desactivar flecha
 							setMouseCallback("image",NULL,NULL);
 
 							//guardar flecha
-							draw_arrow(ImageObj,ar_ori,ar_end);
+							draw_arrow(ImageRect,ar_ori,ar_end);
+							Image = ImageRect.clone();
+							ImageObj = ImageRect.clone();
 
-							Image = ImageObj.clone();
-
-							drawing_arrow = false;
 							//calcular angulo y guardar el angulo
 
 							deltax = ar_end.x - ar_ori.x;
@@ -551,7 +553,7 @@ int main( int argc, char* argv[] ) {
 							obj_done=true;
 						}else cout<<"Draw arrow first"<<endl;
 					}else cout<<"Draw box first"<<endl;
-				}else cout<<"You have saved the point, press space for an other frame"<<endl;
+				}else cout<<"You have saved the objects, press space for an other frame"<<endl;
 			break;
 
 
