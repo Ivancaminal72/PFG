@@ -269,8 +269,7 @@ int main( int argc, char* argv[] ) {
 						save_img_file=save_img_dir;
 						save_img_file/=(dit->path()).filename();
 						if(bf::is_regular_file(dit->status())){
-							//copy_file(dit->path(),save_img_file,bf::copy_option::overwrite_if_exists);
-							cout<<dit->path().native()<<endl;
+							copy_file(dit->path(),save_img_file,bf::copy_option::overwrite_if_exists);
 						}
 					}
 					

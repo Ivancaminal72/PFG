@@ -14,16 +14,15 @@
 #include <string>
 #include <dirent.h>
 #include <math.h>/* atan2 */
+#include <boost/filesystem.hpp>
 
 #define PI 3.14159265
 
 using namespace cv;
 using namespace std;
+namespace bf = boost::filesystem;
 
-// Define our callback which we will install for
-// mouse events.
-//
-
+// Define our callback which we will install for mouse events.
 void my_mouse_callback_box( int event, int x, int y, int flags, void* param );
 
 void my_mouse_callback_arrow( int event, int x, int y, int flags, void* param );
@@ -175,6 +174,35 @@ bool saveRoutes(vector<vector<TrayPoint>> rutas, string case_dir, string video_n
 	return true;
 }
 
+bool verifyDir(bf::path dir, bool doCreation){
+	char op;
+	cout<<endl<<dir<<endl;
+	if(bf::exists(dir)){
+			if(bf::is_directory(dir)){
+				cout<<"Correct directory!"<<endl;
+				return true;
+			}else{
+				cout<<"It is not a directory"<<endl;
+				return false;
+			}
+	}else if(doCreation){
+		cout<<"It doesn't exist"<<endl;
+		cout<<"Do you want to create it? [y/n]"<<endl;
+		cin>>op;
+		if(op == 'y'){
+			if(bf::create_directories(dir)){
+				cout<<"Directory created!"<<endl;
+				return true;
+			}else{
+				cout<<"Error creating directory"<<endl;
+				return false;
+			} 
+		}else return false;
+	}
+	cout<<"It doesn't exist"<<endl;
+	return false;
+}
+
 
 
 int main( int argc, char* argv[] ) {
@@ -183,16 +211,9 @@ int main( int argc, char* argv[] ) {
 		//cout<<"USAGE:"<<endl<< "DataBaseGenerator [video_to_read] [directory/to/save/images] [route/to/cascade_angles.dat] [route/to/Cascade.dat] [fichero/trayectorias.yml]"<<endl;
 		cout<<"USAGE:"<<endl<< "DataBaseGenerator [video_path_to_read] [directory/case]"<<endl;
 		return -1;
-	}	
-
-	cout<<"Press P to save rectangle"<<endl<<"Press D to clear a wrong box"<<endl;
-	cout<<"Press N to save arrow"<<endl;
-	cout<<"Press R to add point to a route"<<endl;
-	cout<<"Press T to create a new route (not first time)"<<endl;
-	cout<<"Press SPACE to next image"<<endl<<"Press ESC to exit"<<endl;
+	}
 
 	box = cvRect(-1,-1,0,0);
-
 	string video_path = argv[1];
 	string case_dir = argv[2];
 	size_t found = video_path.find_last_of("/");
@@ -206,12 +227,26 @@ int main( int argc, char* argv[] ) {
 		video_name=video_name.substr(0,found);
 	}
 
-	string images_dir = case_dir+"images/";
-	string angles_path = case_dir+"angles/"+video_name+".dat";
-	string cascades_path = case_dir+"cascades/"+video_name+".dat";
+	bf::path images_dir = case_dir+"images/";
+	bf::path angles_dir = case_dir+"angles/";
+	bf::path cascades_dir = case_dir+"cascades/";
+	bf::path routes_dir = case_dir+"routes/";
+	if(!verifyDir(images_dir, true)) return -1;
+	if(!verifyDir(angles_dir, true)) return -1;
+	if(!verifyDir(cascades_dir, true)) return -1;
+	if(!verifyDir(routes_dir, true)) return -1;
+	bf::path angles_path = angles_dir.native()+video_name+".dat";
+	bf::path cascades_path = cascades_dir.native()+video_name+".dat";
+
+	cout<<endl<<"Press P to save rectangle"<<endl<<"Press D to clear a wrong box"<<endl;
+	cout<<"Press N to save arrow"<<endl;
+	cout<<"Press Q to reset current objects"<<endl;
+	cout<<"Press R to add point to a route"<<endl;
+	cout<<"Press T to create a new route (not first time)"<<endl;
+	cout<<"Press SPACE to next image"<<endl<<"Press ESC to save and exit"<<endl;
+
 
 	vector<LabelProps> vObj;
-
 
 	//inicializacion trayectorias
 	vector <vector < TrayPoint> > VTrayectorias;
@@ -362,7 +397,7 @@ int main( int argc, char* argv[] ) {
 
 				if(point_saved){
 					cout<<"frame "<<nframe<<" OK"<<endl;
-					ruta <<images_dir<<nframe<<"_"<<video_name<<".png"; //ruta para guardar la imagen
+					ruta <<images_dir.native()<<nframe<<"_"<<video_name<<".png"; //ruta para guardar la imagen
 
 					imwrite(ruta.str(), OriImage);
 
