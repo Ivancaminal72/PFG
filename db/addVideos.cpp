@@ -103,7 +103,7 @@ bool loadRoutes(bf::path loadRoutesPath){
 	}
 }
 
-bool loadCascadeAngles(bf::path loadCasAngPath){
+bool loadCascadeAngles(bf::path loadCasAngPath, string seq_name){
 	bool withAngles = false;
 	std::size_t found = loadCasAngPath.native().find("angles");
 	if (found!=std::string::npos){withAngles = true;}
@@ -116,7 +116,15 @@ bool loadCascadeAngles(bf::path loadCasAngPath){
 	ifstream fd(loadCasAngPath.c_str());
 	if(fd.is_open()){
 		string line;
+		std::size_t pos;
 		while(getline(fd, line)){
+			pos = line.find("/images/");
+			if(pos == string::npos){
+				cout<<"ERROR: Wrong image path"<<endl<<endl;
+				return false;
+			}
+			line=line.substr(pos);
+			line=seq_name+line;
 			if(withAngles) vAngles.push_back(line);
 			else vCascades.push_back(line);
 		}
@@ -261,7 +269,8 @@ int main( int argc, char* argv[] ) {
 						save_img_file=save_img_dir;
 						save_img_file/=(dit->path()).filename();
 						if(bf::is_regular_file(dit->status())){
-							copy_file(dit->path(),save_img_file,bf::copy_option::overwrite_if_exists);
+							//copy_file(dit->path(),save_img_file,bf::copy_option::overwrite_if_exists);
+							cout<<dit->path().native()<<endl;
 						}
 					}
 					
@@ -305,8 +314,8 @@ int main( int argc, char* argv[] ) {
 					vid_name=vid_file.substr(0,found);
 				}
 				if(!loadRoutes(pack_dir+pack_name+"/routes/"+vid_name+".yml")) break;
-				if(!loadCascadeAngles(pack_dir+pack_name+"/angles/"+vid_name+".dat")) break;
-				if(!loadCascadeAngles(pack_dir+pack_name+"/cascades/"+vid_name+".dat")) break;
+				if(!loadCascadeAngles(pack_dir+pack_name+"/angles/"+vid_name+".dat",seq_name)) break;
+				if(!loadCascadeAngles(pack_dir+pack_name+"/cascades/"+vid_name+".dat",seq_name)) break;
 				while(vCapt.read(img)){
 					video.push_back(img.clone());
 				}
