@@ -34,12 +34,18 @@ bool arrow_drawed = false;
 bool box_drawed = false;
 
 
-Mat Image, ImageObj, ImageRect, temp;
+Mat OriImage, ImageRect, ImageObj, Image,temp;
 Mat croppedImage;
-Mat OriImage;
 Mat cpIbyn;
 Point ar_ori (-1,-1);
 Point ar_end (-1,-1);
+
+bf::path images_dir;
+bf::path angles_dir;
+bf::path cascades_dir;
+bf::path routes_dir;
+string video_name;
+int nframe = -1;
 
 struct TrayPoint{
 	int frame;
@@ -65,7 +71,7 @@ void draw_arrow (Mat img, Point pt1, Point pt2){
 	arrowedLine(img, pt1, pt2, Scalar(0,0,255), 1, 8, 0, 0.1);
 }
 
-int lastLabeledFrame(string case_dir, string video_name){
+int lastLabeledFrame(string case_dir){
 	int num_routes=-1;
 	int llf=-1;
 	string routes_path = case_dir+"routes/"+video_name+".yml";
@@ -91,7 +97,7 @@ int lastLabeledFrame(string case_dir, string video_name){
 }
 
 //guardar fichero de trayectorias
-bool saveRoutes(vector<vector<TrayPoint>> rutas, string case_dir, string video_name){
+bool saveRoutes(vector<vector<TrayPoint>> rutas, string case_dir){
     vector<vector<TrayPoint>> old_rutas;
     vector<TrayPoint> old_ruta;
     string routes_path = case_dir+"routes/"+video_name+".yml";
@@ -172,6 +178,35 @@ bool saveRoutes(vector<vector<TrayPoint>> rutas, string case_dir, string video_n
 	return true;
 }
 
+bool saveCascadesAngles(fstream& fd_cascades, fstream& fd_angles, vector<LabelProps>& vObj){
+
+	if(!fd_angles.is_open()) return false;
+	if(!fd_cascades.is_open()) return false;
+	
+	stringstream line;
+	line<<images_dir.native()<<nframe<<"_"<<video_name<<".png"; //Path where frame will be saved
+
+	imwrite(line.str(), OriImage);
+
+	line<<" "<<vObj.size();
+
+	//Write cascade objects
+	for (uint i=0; i<vObj.size(); i++){
+		line <<" "<<vObj[i].x<<" "<<vObj[i].y<<" "<<vObj[i].width<<" "<<vObj[i].height;
+	}
+	fd_cascades << line.str() <<endl;
+	
+	//Write angles objects
+	line<<" angles";
+	for (uint i=0; i<vObj.size(); i++){
+		line<<" "<<vObj[i].angle;
+	}
+	fd_angles << line.str() << endl;
+
+	cout<<"frame "<<nframe<<" SAVED "<<vObj.size()<<" labels"<<endl;
+	return true;
+}
+
 bool verifyDir(bf::path dir, bool doCreation){
 	char op;
 	cout<<endl<<dir<<endl;
@@ -215,7 +250,8 @@ int main( int argc, char* argv[] ) {
 	string video_path = argv[1];
 	string case_dir = argv[2];
 	size_t found = video_path.find_last_of("/");
-	string video_name = video_path.substr(found+1);
+	if(found == string::npos) found = 0;
+	video_name = video_path.substr(found+1);
 	found = video_name.find(".AVI");
 
 	if(found == string::npos){
@@ -225,10 +261,10 @@ int main( int argc, char* argv[] ) {
 		video_name=video_name.substr(0,found);
 	}
 
-	bf::path images_dir = case_dir+"images/";
-	bf::path angles_dir = case_dir+"angles/";
-	bf::path cascades_dir = case_dir+"cascades/";
-	bf::path routes_dir = case_dir+"routes/";
+	images_dir = case_dir+"images/";
+	angles_dir = case_dir+"angles/";
+	cascades_dir = case_dir+"cascades/";
+	routes_dir = case_dir+"routes/";
 	if(!verifyDir(images_dir, true)) return -1;
 	if(!verifyDir(angles_dir, true)) return -1;
 	if(!verifyDir(cascades_dir, true)) return -1;
@@ -241,7 +277,7 @@ int main( int argc, char* argv[] ) {
 	cout<<"Press Q to reset current objects"<<endl;
 	cout<<"Press R to add point to a route"<<endl;
 	cout<<"Press T to create a new route (not first time)"<<endl;
-	cout<<"Press SPACE to next image"<<endl<<"Press ESC to save and exit"<<endl;
+	cout<<"Press SPACE to next image"<<endl<<"Press ESC to save and exit"<<endl<<endl;
 
 
 	vector<LabelProps> vObj;
@@ -291,11 +327,11 @@ int main( int argc, char* argv[] ) {
 
 
 	if (!fd_angles.is_open()){
-		cout <<"no se ha podido abrir el archivo de datos 1"<<endl;
+		cout <<"Error opening angles file"<<endl;
 		return -1;
 	}
 	if(!fd_cascades.is_open()){
-		cout <<"no se ha podido abrir el archivo de datos 2"<<endl;
+		cout <<"Error opening cascades file"<<endl;
 		return -1;
 	}
 
@@ -304,8 +340,7 @@ int main( int argc, char* argv[] ) {
 	VideoCapture video(video_path);
 
 	//avançament de frames
-	int nframe = -1;
-	int llf =lastLabeledFrame(case_dir, video_name);
+	int llf =lastLabeledFrame(case_dir);
 	if(llf < video.get(CV_CAP_PROP_FRAME_COUNT)){
 		for(; nframe<llf+1; nframe++){
 			if(!(video.read(Image))){
@@ -315,17 +350,15 @@ int main( int argc, char* argv[] ) {
 			if(nframe>=0) cout<<"frame "<<nframe<<" DONE"<<endl;
 		}
 	}
-
+	cout<<"frame "<<nframe<<" READY"<<endl;
+	cout.flush();
     OriImage = Image.clone(); //Original image
     ImageObj = Image.clone(); //Image with current objects
-
+    ImageRect = Image.clone(); //Image with current objects and last box
 	namedWindow( "image" );
 
 	setMouseCallback("image", my_mouse_callback_box );
 
-	stringstream ruta;
-
-    cout<<"inicio del programa"<<endl;
 	bool point_saved = false;
 	bool press_space = false;
 	bool obj_done = false;
@@ -346,19 +379,21 @@ int main( int argc, char* argv[] ) {
 		char c = waitKey(1);
 		switch (c){
 			case 27:// esc
-				cout<<endl<<"programa cerrado manualmente"<<endl;
+				cout<<endl<<"program closed correctly"<<endl;
 				if(!VTrayectoria.empty()) VTrayectorias.push_back(VTrayectoria);
 				if(!VTrayectorias.empty()){
 					//guardar trayectorias
 					//añadir ultima trayectoria
-					cout<<"guardando trayectorias"<<endl;
-					if(!saveRoutes(VTrayectorias, case_dir, video_name)){
+					cout<<"saving routes";
+					if(!saveRoutes(VTrayectorias, case_dir)){
+						cout<<" error"<<endl;
 						return -1;
 					}
 					fd_cascades.close();
 					fd_angles.close();
 					//destroyWindow("image");
 					//Salir del programa
+					cout<<" ok"<<endl;
 				}
 				return 0;
 			break;
@@ -387,54 +422,23 @@ int main( int argc, char* argv[] ) {
 
 			case 32://espacio
 				if(!point_saved && !drawing_arrow && !drawing_box){ //Restart drawing box
-					cout<<"You haven't saved current objects yet"<<endl;
 					setMouseCallback("image",NULL,NULL);
 					setMouseCallback("image", my_mouse_callback_box);
 					ImageRect=ImageObj.clone();
 					Image=ImageObj.clone();
 				}
+				
+				if(point_saved || press_space){//Go to the next frame
 
-				if(point_saved){
-					cout<<"frame "<<nframe<<" OK"<<endl;
-					ruta <<images_dir.native()<<nframe<<"_"<<video_name<<".png"; //ruta para guardar la imagen
-
-					imwrite(ruta.str(), OriImage);
-
-					ruta<<" "<<vObj.size();
-
-					//Escribir los datos en el fichero
-					for (uint i=0; i<vObj.size(); i++){
-						ruta <<" "<<vObj[i].x<<" "<<vObj[i].y<<" "<<vObj[i].width<<" "<<vObj[i].height;
-					}
-
-					//datos para entrenamiento de cascade
-					fd_cascades << ruta.str() <<endl;
-
-					ruta<<" angles";
-
-					for (uint i=0; i<vObj.size(); i++){
-						ruta<<" "<<vObj[i].angle;
-					}
-					
-
-					fd_angles << ruta.str() << endl;
-
-					ruta.str("");
-				}
-
-				//pasar a la siguiente imagen
-
-				//leer frame
-				if(point_saved || press_space){
 					if(!(video.read(Image))){//End of video, time to save routes
 						cout << "fin de la secuencia" << endl;
 						VTrayectorias.push_back(VTrayectoria);
 						cout<<"guardando trayectorias"<<endl;
-						if(!saveRoutes(VTrayectorias, case_dir, video_name)){
+						if(!saveRoutes(VTrayectorias, case_dir)){
 							return -1;
 						}
 
-					}else{//New img
+					}else{//New frame
 						ImageObj = Image.clone();
 						OriImage = Image.clone();
 						ImageRect = Image.clone();
@@ -447,7 +451,8 @@ int main( int argc, char* argv[] ) {
 							point_saved = false;
 						}else cout<<"frame "<<nframe<<" NOT LABELED"<<endl;
 						vObj.clear();
-						nframe++;
+						nframe+=1;
+						cout<<"frame "<<nframe<<" READY"<<endl;
 						setMouseCallback("image",NULL,NULL);
 						setMouseCallback("image", my_mouse_callback_box);
 					}
@@ -547,7 +552,7 @@ int main( int argc, char* argv[] ) {
 							puntotray.Pos = ar_ori;
 							puntotray.angle = round(theta1);
 							puntotray.frame = nframe;
-							cout<<"frame "<<nframe<<" label "<<vObj.size()<<endl;
+							cout<<"frame "<<nframe<<" label "<<vObj.size()<<" ok"<<endl;
 							setMouseCallback("image",NULL,NULL);
 							setMouseCallback("image", my_mouse_callback_box);
 							obj_done=true;
@@ -568,9 +573,13 @@ int main( int argc, char* argv[] ) {
 								//añadir ruta guardada
 								VTrayectorias.push_back(VTrayectoria);
 								//borrar la ruta
-							    VTrayectoria.clear();
-							    //generar la ruta con el punto nuevo
-							    VTrayectoria.push_back(puntotray);
+								VTrayectoria.clear();
+								//generar la ruta con el punto nuevo
+								VTrayectoria.push_back(puntotray);
+								if(!saveCascadesAngles(fd_cascades, fd_angles, vObj)){
+									cout<<"Error saving cascadeAngles"<<endl;
+									return -1;
+								}
 							    point_saved=true;
 							}else{
 								cout<<"Cancelled new route"<<endl;
@@ -588,6 +597,10 @@ int main( int argc, char* argv[] ) {
 					if(obj_done){
 						//despues de guardar la flecha
 						VTrayectoria.push_back(puntotray);
+						if(!saveCascadesAngles(fd_cascades, fd_angles, vObj)){
+							cout<<"Error saving cascadeAngles"<<endl;
+							return -1;
+						}
 						point_saved=true;
 					}else cout<<"Uncompleted label"<<endl;
 				}else cout<<"You have already saved the point, press space for an other frame"<<endl;
