@@ -467,11 +467,13 @@ int main( int argc, char* argv[] ) {
 
 			case 100: //D
 				if(!point_saved){
-					if(obj_done || obj_start) { //delete last box
+					if(!drawing_arrow && !drawing_box){
+						if(obj_done || obj_start) { //delete last box
 						ImageRect = ImageObj.clone();
 						Image = ImageObj.clone();
-					}else Image = ImageRect.clone();
-				}else cout<<"Can't delete, you're not drawing any object"<<endl;
+						}else Image = ImageRect.clone();
+					}else cout<<"Can't delete until stop drawing"<<endl;
+				}else cout<<"Can't delete, 	ojbects saved"<<endl;
 				
 			break;
 
