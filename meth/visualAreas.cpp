@@ -156,16 +156,17 @@ int main( int argc, char* argv[] ) {
 	string save_file,routes_name;
 	bf::path routes_path, save_dir = "./generatedVisualAreas/";
 
-	//if (argc < 2 || argc > 5) {//wrong arguments
-	if (argc < 1 || argc > 5) {
+	if (argc < 2 || argc > 5) {
+	//if (argc < 1 || argc > 5) {
 		cout<<"USAGE:"<<endl<< "./visualAreas rotues_path [horizontal_angle] [save_file] [dir_save/]"<<endl<<endl;
-		cout<<"DEFAULT [horizontal_angle] = "<<hAngle<<endl;
-		cout<<"DEFAULT [dir_save/] = "<<save_dir<<endl;
+		cout<<"DEFAULT [horizontal_angle] = 20"<<endl;
+		cout<<"DEFAULT [dir_save/] = "<<save_dir.native()<<endl;
 		cout<<"DEFAULT [save_file] = routes_name+horizontal_angle.yml"<<endl;
 		return -1;
 	}else{
-		//routes_path = argv[1];
-		routes_path = "/home/ivan/videos/sequences/pack3/routes.yml";
+		routes_path = argv[1];
+		//routes_path = "/home/ivan/videos/sequences/pack3/routes.yml";
+		//routes_path = "/home/ivan/videos/sequences/pack1/routes/sonia_gasco_original.yml";
 		if(!bf::exists(routes_path) or !routes_path.has_filename()) {cout<<"Wrong routes_path"<<endl; return -1;}
 		if(argc > 2) hAngle = atof(argv[2])*M_PI/180;
 		if(argc > 3) {
@@ -176,7 +177,8 @@ int main( int argc, char* argv[] ) {
 				return -1;
 			}
 		}else{
-			save_file=routes_path.filename().native()+to_string(hAngle)+".yml";
+			
+			save_file=to_string((int)(hAngle*180/M_PI))+"_"+routes_path.filename().native();
 		}
 		if(argc == 5) save_dir = argv[4];
 	}
@@ -198,7 +200,8 @@ int main( int argc, char* argv[] ) {
 
 	int lim1,lim2,cor1,cor2,cor3,cor4,markPxFloor,markPxWalls;
 	double tAngle, dist, wFloor, wWalls, wCeiling, aFloor, aWalls, aCeiling;
-	Point2d tpos, ori, prev, act, plim1, plim2, plim3, pver1, pver2, pver3, pver4; //2 dimensions <double> precission
+	Point2d tpos, ori, prev, act, plim1, plim2, plim3;  //2 dimensions <double> precission
+	Point pver1, pver2, pver3, pver4;
 	vector<Point> vpts, vpts2;
 	vector<Point2d> vplim3;
 	Mat mR, mOri, mAct, mWalls, mFloor, mCeiling, mTotalWalls, mTotalFloor, mTotalCeiling; 
@@ -211,11 +214,14 @@ int main( int argc, char* argv[] ) {
 	pver3.x=roomSize.width-1; pver3.y=roomSize.height-1;
 	pver4.x=0; pver4.y=roomSize.height-1;
 
+	//Inicialize mTotals
+	mTotalFloor = Mat::zeros(roomSize, CV_64F);
+	mTotalWalls = Mat::zeros(1, mWLength, CV_64F);
+	mTotalCeiling = Mat::zeros(roomSize, CV_64F);
 
 	loadRoutes(routes_path);
 	vector<TrayPoint>::iterator it=rutas.begin();
 	for(; it<rutas.end(); it++){
-
 		tAngle = (it->angle)*M_PI/180;
 		tpos = (it->pos);
 		act.x=-1; act.y=-1;
@@ -259,34 +265,30 @@ int main( int argc, char* argv[] ) {
 			//--------------verify out of bounds--------------//
 			if(act.y<=0 or act.x>=roomSize.width-1 or act.y>=roomSize.height-1 or act.x<=0){//act point is in the limit or out of bounds
 				correctedAct=false;
-				while(act.y<0 or act.x>roomSize.width-1 or act.y>roomSize.height-1 or act.x<0 or !correctedAct){
+				while(round(act.y)<0 or round(act.x)>roomSize.width-1 or round(act.y)>roomSize.height-1 or round(act.x)<0 or !correctedAct){
 					if(act.y<0){
 						if(!findIntersection(act, Point2d(act), prev, pver1, pver2)) {
 							cout<<"Error intersection: "<<act<<prev<<" type1"<<endl; 
 							return -1;
 						}
-						//act.y=0;
 					}
 					if(act.x>roomSize.width-1){
 						if(!findIntersection(act, Point2d(act), prev, pver2, pver3)) {
 							cout<<"Error intersection: "<<act<<prev<<" type2"<<endl; 
 							return -1;
 						}
-						//act.x=roomSize.width-1;
 					}
 					if(act.y>roomSize.height-1){
 						if(!findIntersection(act, Point2d(act), prev, pver3, pver4)) {
 							cout<<"Error intersection: "<<act<<prev<<" type4"<<endl; 
 							return -1;
 						}
-						//act.y=roomSize.height-1;
 					}
 					if(act.x<0){
 						if(!findIntersection(act, Point2d(act), prev, pver4, pver1)) {
 							cout<<"Error intersection: "<<act<<prev<<" type3"<<endl; 
 							return -1;
 						}
-						//act.x=0;
 					}
 					correctedAct=true;
 				}
@@ -340,13 +342,13 @@ int main( int argc, char* argv[] ) {
 
 		//5-Add corner area points
 		if(lim2<lim1){
-			if(lim1<cor2) vpts.push_back(Point(round(pver2.x),round(pver2.y)));
-			if(lim1<cor3) vpts.push_back(Point(round(pver3.x),round(pver3.y)));
-			if(lim1<cor4) vpts.push_back(Point(round(pver4.x),round(pver4.y)));
-			if(lim2!=cor1) vpts.push_back(Point(round(pver1.x),round(pver1.y)));
-			if(lim2>cor2) vpts.push_back(Point(round(pver2.x),round(pver2.y)));
-			if(lim2>cor3) vpts.push_back(Point(round(pver3.x),round(pver3.y)));
-			if(lim2>cor4) vpts.push_back(Point(round(pver4.x),round(pver4.y)));
+			if(lim1<cor2) vpts.push_back(pver2);
+			if(lim1<cor3) vpts.push_back(pver3);
+			if(lim1<cor4) vpts.push_back(pver4);
+			if(lim2!=cor1) vpts.push_back(pver1);
+			if(lim2>cor2) vpts.push_back(pver2);
+			if(lim2>cor3) vpts.push_back(pver3);
+			if(lim2>cor4) vpts.push_back(pver4);
 		}else{
 			if(lim1<cor2 and lim2>cor2) vpts.push_back(Point(round(pver2.x),round(pver2.y)));
 			if(lim1<cor3 and lim2>cor3) vpts.push_back(Point(round(pver3.x),round(pver3.y)));
@@ -381,20 +383,19 @@ int main( int argc, char* argv[] ) {
 		}
 
 		mFloor = Mat::zeros(roomSize, CV_64F);
-		Point pts[vpts.size()];
+		Point pts[1][vpts.size()];
 		vector<Point>::iterator it2=vpts.begin();
 		int posPts=0;
 		for(; it2!=vpts.end(); it2++){
-			pts[posPts]=(*it2);
+			pts[0][posPts]=(*it2);
 			posPts+=1;
 		}
 
-		cv::fillConvexPoly(mFloor, pts, vpts.size(),cv::Scalar(1));
+		//cv::fillConvexPoly(mFloor, pts, vpts.size(),cv::Scalar(1)); //Leaves some areas not drawed
+		int npt[] = {(int) vpts.size()};
+		const Point* ppt[1] = {pts[0]}; 
+		cv::fillPoly(mFloor, ppt, npt, 1, cv::Scalar(1),8);
 		mCeiling=mFloor.clone();
-
-		/* //Logging
-		imshow("suuh", mFloor);
-		waitKey(0);*/
 
 		//7-Normalize mFoor and mWalls
 		markPxFloor = 0;
@@ -455,7 +456,7 @@ int main( int argc, char* argv[] ) {
 					if(it3 == vplim3.begin()) plim3=(*it3);
 					else if((*it3).y < plim3.y) plim3=(*it3);
 				}
-			}else if(sin(tAngle == -1)){ //270 deg
+			}else if(sin(tAngle) == -1){ //270 deg
 				for(; it3!=vplim3.end(); it3++){
 					if(it3 == vplim3.begin()) plim3=(*it3);
 					else if((*it3).y > plim3.y) plim3=(*it3);
@@ -505,7 +506,42 @@ int main( int argc, char* argv[] ) {
 		waitKey(0);
 
 		//8-Add to de total
+		mTotalFloor+=mFloor;
+		mTotalCeiling+=mCeiling;
+		mTotalWalls+=mWalls;
 
+	}
+	mTotalFloor=mTotalFloor*(1/(double)rutas.size());
+	mTotalCeiling=mTotalCeiling*(1/(double)rutas.size());
+	mTotalWalls=mTotalWalls*(1/(double)rutas.size());
+
+	/*//Logging
+	imshow("mTotalFloor", mTotalFloor);
+	waitKey(0);*/
+
+	//9-Save matrices
+	char op;
+	cout<<"Do you want to save result? [y/n]"<<endl;
+	cin>>op;
+	while(op != 'y' and op != 'n'){
+		cout<<"Invalid option"<<endl;
+		cin>>op;
+	}
+	if(op == 'y'){
+		cout<<endl<<"Saving Results ";
+		FileStorage fs_result;
+		cout<<save_dir.native()+save_file<<endl;
+		if(fs_result.open(save_dir.native()+save_file, FileStorage::WRITE)){
+			fs_result<<"hAngle"<<(int)(hAngle*180/M_PI);
+			fs_result<<"mTotalFloor"<<mTotalFloor;
+			fs_result<<"mTotalWalls"<<mTotalWalls;
+			fs_result<<"mTotalCeiling"<<mTotalCeiling;
+			fs_result.release();
+			cout<<"OK!"<<endl;
+		}else{
+			cout<<"ERROR: Can't open for write"<<endl<<endl;
+			return -1;
+		}
 	}
 }
 
