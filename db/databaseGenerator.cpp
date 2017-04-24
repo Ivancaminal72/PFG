@@ -13,7 +13,7 @@
 #include <fstream>
 #include <string>
 #include <dirent.h>
-#include <math.h>/* atan2 */
+#include <math.h>
 #include <boost/filesystem.hpp>
 
 #define PI 3.14159265
@@ -242,7 +242,7 @@ int main( int argc, char* argv[] ) {
 
 	if (argc != 3) {
 		//cout<<"USAGE:"<<endl<< "DataBaseGenerator [video_to_read] [directory/to/save/images] [route/to/cascade_angles.dat] [route/to/Cascade.dat] [fichero/trayectorias.yml]"<<endl;
-		cout<<"USAGE:"<<endl<< "DataBaseGenerator [video_path_to_read] [directory/case]"<<endl;
+		cout<<"USAGE:"<<endl<< "DataBaseGenerator video_path_to_read directory/case"<<endl;
 		return -1;
 	}
 

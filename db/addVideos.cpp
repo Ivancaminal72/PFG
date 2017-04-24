@@ -7,7 +7,7 @@
 #include <fstream>
 #include <string>
 #include <dirent.h>
-#include <math.h>/* atan2 */
+#include <math.h>
 #include <boost/filesystem.hpp>
 
 using namespace cv;
@@ -155,6 +155,7 @@ bool saveRoutes(bf::path saveRoutesPath){
 		 	}
 		 	fs_routes<<"]";
 		}
+		fs_routes<<"ultimaRuta"<<(int) vRutas.size();
 		fs_routes.release();
 		cout<<"OK!"<<endl;
 		return true;

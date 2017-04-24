@@ -7,7 +7,7 @@
 #include <fstream>
 #include <string>
 #include <dirent.h>
-#include <math.h>/* atan2 */
+#include <math.h>
 #include <boost/filesystem.hpp>
 
 using namespace cv;
