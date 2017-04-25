@@ -214,9 +214,9 @@ int main( int argc, char* argv[] ) {
 	char op;
 	Mat img,uimg, cameraMatrix, distCoeffs;
 
-	if (argc < 3 || argc > 12) {//wrong arguments
+	if (argc < 3 || argc > 10) {//wrong arguments
 		cout<<"USAGE:"<<endl<< "./routesReCalibrate sequence_name camera_calibration_path [pack_name] \n"; 
-		cout<<"[dir_save/] [dir_packs/] [routes_path] [angles_path] [cascades_path] \n[video_path] [images_folder]"<<endl<<endl;
+		cout<<"[dir_save/] [dir_packs/] [routes_path] [angles_path] [cascades_path] \n[video_path]"<<endl<<endl;
 		cout<<"DEFAULT [pack_name] = sequence_name"<<endl;
 		cout<<"DEFAULT [dir_save/] = "<<seq_dir<<endl;
 		cout<<"DEFAULT [dir_packs/] = "<<pack_dir<<endl;
@@ -224,7 +224,6 @@ int main( int argc, char* argv[] ) {
 		//cout<<"DEFAULT [angles_path] = dir_packs/pack_name/angles.dat"<<endl;
 		//cout<<"DEFAULT [cascades_path] = dir_packs/pack_name/cascades.dat"<<endl;
 		cout<<"DEFAULT [video_path] = dir_packs+pack_name/pack_name.AVI"<<endl;
-		//cout<<"DEFAULT [images_folder] = "<<images_dir<<endl;
 		return -1;
 	}else{
 		seq_name = argv[1];
@@ -239,9 +238,8 @@ int main( int argc, char* argv[] ) {
 		else angles_path = pack_dir+pack_name+"/angles.dat";
 		if(argc > 8) cascades_path = argv[8];
 		else cascades_path = pack_dir+pack_name+"/cascades.dat";
-		if(argc > 9) video_path = argv[9];
+		if(argc == 10) video_path = argv[9];
 		else video_path = pack_dir+pack_name+"/"+pack_name+".AVI";
-		if(argc == 11) images_dir = argv[10];
 		images_dir = pack_dir+pack_name+"/"+images_dir;
 	}
 
