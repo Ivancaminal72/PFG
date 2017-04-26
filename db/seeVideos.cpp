@@ -175,7 +175,7 @@ int main( int argc, char* argv[] ) {
 	}
 	//load de routes2 and draw arrow
 	if(bf::exists(routes2_path)){
-		if(!loadRotesAndDrawArrows(routes2_path, video, Scalar(0,255,0), 80, vR2, vrecs2)) return -1;
+		if(!loadRotesAndDrawArrows(routes2_path, video, Scalar(0,255,255), 80, vR2, vrecs2)) return -1;
 		double err_x=0, err_y=0, err_a=0;
 		int count = 0;
 		vector<TrayPoint>::iterator itr1 = vR1.begin();
