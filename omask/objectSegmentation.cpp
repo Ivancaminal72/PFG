@@ -12,7 +12,9 @@ static void help(){
 	cout<<"USE: m to change between manual and watershed mode"<<endl;
 	cout<<"USE: r to restart marks"<<endl;
 }
-int tam =4,c;
+int c;
+uint8_t inx=4;
+vector<unsigned char> vexp;
 char strBgr[]= "Mark background", strObj[]= "Mark the object", 
 strFin[]= "Press space to finish", strSave[]= "Press 's' to save",
 strMan[]= "Manual mode";
@@ -49,8 +51,8 @@ static void onMouse( int event, int x, int y, int flags, void*){
     else if( event == EVENT_MOUSEMOVE && (flags & EVENT_FLAG_LBUTTON) ){
         Point pt(x, y);
         if( (pt.x >= 0 or pt.y >= 0 or pt.x<img.cols or pt.y<img.rows) and (pt != prevPt) ){
-        	line( markerMask, prevPt, pt, Scalar(255), tam, 8, 0 );
-			line( img, prevPt, pt, Scalar(255,255,255), tam, 8, 0 );
+        	line( markerMask, prevPt, pt, Scalar(255), vexp.at(inx), 8, 0 );
+			line( img, prevPt, pt, Scalar(255,255,255), vexp.at(inx), 8, 0 );
 			prevPt = pt;
 			imgt=img.clone();
 			if(manual) putText(imgt, strMan, Point2f(10,470), FONT_HERSHEY_PLAIN, 2,  Scalar(0,255,255,255));
@@ -87,16 +89,22 @@ int main( int argc, char** argv ){
     putText(imgt, strBgr, Point2f(350,470), FONT_HERSHEY_PLAIN, 2,  Scalar(0,0,255,255));
     imshow( "image", imgt );
     setMouseCallback( "image", onMouse, 0 );
+    float ii=0, resp=round(pow(1.4,ii));
+    while(resp<=255){
+    	vexp.push_back((unsigned char)resp);
+    	ii+=1;
+    	resp=round(pow(1.4,ii));
+    }
 
     for(;;){
         c = waitKey(0);
         if( (char)c == 27 ) break;
 
-        if( (char)c == '-' && tam>1) tam/=2;
+        if( (char)c == '-' && inx>0) inx-=1;
 
-        if( (char)c == '+' ) tam*=2;
+        if( (char)c == '+' && inx<vexp.size()-1) inx+=1;
 
-		if( ((char)c == 'r') ){
+		if( (char)c == 'r' ){
 			markerMask = Scalar::all(0);
 			img0.copyTo(img);
 			imgt=img.clone();
@@ -169,7 +177,7 @@ int main( int argc, char** argv ){
             img = mres*0.6 + imgGray*0.4;
             cvtColor(img, img, COLOR_GRAY2BGR);
             putText(img, strSave, Point2f(300,470), FONT_HERSHEY_PLAIN, 2,  Scalar(0,255,0,255));
-            imshow( "Preview result", img );
+            imshow( "image", img );
             c = waitKey(0);
             if( (char)c == 's') {
                 vector<int> compression_params;
