@@ -190,9 +190,9 @@ int main( int argc, char* argv[] ) {
 	roomSize.width = 1101; //1101 8
 	roomSize.height = 828; //828 6
 	imgSize.width = 640; //640 5
-	imgSize.height = 480; //480 4
+	imgSize.height = 480; //480 4 
 	double persHeight = 1.6*RPM;//1.6*RPM 3
-	double sensorHeight = 3,1*RPM; //~3*RPM 4
+	double sensorHeight = 3.1*RPM; //~3*RPM 4
 	Point camCoor(round(5.35*RPM-2.46*RPM),round(3.77*RPM-1.845*RPM));//Point camCoor(3,2);
 	int mWLength = roomSize.width*2+(roomSize.height-2)*2;
 
@@ -236,8 +236,13 @@ int main( int argc, char* argv[] ) {
 			return -1;
 		}
 		cout<<"it->pos: "<<tpos<<endl;
+
 		//1-Correction of tpos real position
-		tpos-=persHeight/sensorHeight*tpos;
+		tpos.x-= imgSize.width/2;
+		tpos.y-= imgSize.height/2;
+		tpos-= persHeight/sensorHeight*tpos;
+		tpos.x+= imgSize.width/2;
+		tpos.y+= imgSize.height/2;
 
 		//2-Move tpos from sensor to room coordinates
 		cout<<"camCoor: "<<camCoor<<" it->pos: "<<tpos<<endl;

@@ -115,11 +115,26 @@ int main( int argc, char* argv[] ) {
 	//Verify and create correct directories
 	if(!verifyDir(save_dir,true)) return -1;
 
-	loadRoutes(routes_path);
+	cv::Size imgSize;
+	imgSize.width = 640; //640 5
+	imgSize.height = 480; //480 4
 
+	//Declare variables
+	Point2d tpos;
+
+	/*loadRoutes(routes_path);
 	vector<TrayPoint>::iterator it=rutas.begin();
 	for(; it<rutas.end(); it++){
 		//Point prespective correction
 		cout<<(it->pos).x<<endl;
+	}*/
+
+	//0-Prove tpos is inside the image bounds
+	if(tpos.x<0 or tpos.x>imgSize.width-1 or tpos.y<0 or tpos.y>imgSize.height-1){
+		cout<<"Error tpos is out of image bounds"<<endl;
+		return -1;
 	}
+	cout<<"it->pos: "<<tpos<<endl;
+	//1-Correction of tpos real position
+	tpos-=persHeight/sensorHeight*tpos;
 }
