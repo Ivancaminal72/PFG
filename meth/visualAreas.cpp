@@ -192,12 +192,11 @@ int main( int argc, char* argv[] ) {
 	imgSize.width = 640; //640 5
 	imgSize.height = 480; //480 4
 	double persHeight = 1.6*RPM;//1.6*RPM 3
-	double wallsHeight = 3*RPM; //~3*RPM 4
-	//Point camCoor(3,2);
-	Point camCoor(round(5.35*RPM-2.46*RPM),round(3.77*RPM-1.845*RPM));
+	double sensorHeight = 3,1*RPM; //~3*RPM 4
+	Point camCoor(round(5.35*RPM-2.46*RPM),round(3.77*RPM-1.845*RPM));//Point camCoor(3,2);
 	int mWLength = roomSize.width*2+(roomSize.height-2)*2;
 
-
+	//Declare variables
 	int lim1,lim2,cor1,cor2,cor3,cor4,markPxFloor,markPxWalls;
 	double tAngle, dist, wFloor, wWalls, wCeiling, aFloor, aWalls, aCeiling;
 	Point2d tpos, ori, prev, act, plim1, plim2, plim3;  //2 dimensions <double> precission
@@ -206,7 +205,6 @@ int main( int argc, char* argv[] ) {
 	vector<Point2d> vplim3;
 	Mat mR, mOri, mAct, mWalls, mFloor, mCeiling, mTotalWalls, mTotalFloor, mTotalCeiling; 
 	bool correctedAct,firstFunctionDone;
-
 
 	//Define room vertices
 	pver1.x=0; pver1.y=0;
@@ -239,7 +237,7 @@ int main( int argc, char* argv[] ) {
 		}
 		cout<<"it->pos: "<<tpos<<endl;
 		//1-Correction of tpos real position
-		tpos-=persHeight/wallsHeight*tpos;
+		tpos-=persHeight/sensorHeight*tpos;
 
 		//2-Move tpos from sensor to room coordinates
 		cout<<"camCoor: "<<camCoor<<" it->pos: "<<tpos<<endl;
@@ -487,7 +485,7 @@ int main( int argc, char* argv[] ) {
 		cout<<"Dist: "<<dist<<endl;
 		//--------------calculate weights-------------------------//
 		aFloor = atan(dist/persHeight);
-		aCeiling = atan(dist/(wallsHeight-persHeight));
+		aCeiling = atan(dist/(sensorHeight-persHeight));
 		aWalls = M_PI-aFloor-aCeiling;
 
 		wFloor = aFloor/M_PI;
