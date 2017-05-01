@@ -250,6 +250,7 @@ int main( int argc, char* argv[] ) {
 		tpos.y += camCoor.y;
 		cout<<"tpos: "<<tpos<<endl;
 		vpts.push_back(Point(round(tpos.x),round(tpos.y)));
+		mR = (Mat_<double>(2,2)<<cos(tAngle),-sin(tAngle),sin(tAngle),cos(tAngle));
 
 		//3-Generate function points
 		while(1){
@@ -258,7 +259,6 @@ int main( int argc, char* argv[] ) {
 			prev=act;
 			ori.y=tan(hAngle)*sqrt(pow(persHeight,2)+pow(ori.x,2));
 			if(firstFunctionDone) ori.y*=-1.0;
-			mR = (Mat_<double>(2,2)<<cos(tAngle),-sin(tAngle),sin(tAngle),cos(tAngle));
 			mOri = (Mat_<double>(2,1)<<ori.x,ori.y);
 			mAct = mR*mOri;
 			//cout<<mAct<<endl; //Logging
@@ -505,7 +505,7 @@ int main( int argc, char* argv[] ) {
 		replaceWeights(mWalls, wCeiling, 1);
 
 		//Logging
-		imshow("suuh", mFloor);
+		imshow("image", mFloor);
 		waitKey(0);
 
 		//8-Add to de total
@@ -519,7 +519,7 @@ int main( int argc, char* argv[] ) {
 	mTotalWalls=mTotalWalls*(1/(double)rutas.size());
 
 	/*//Logging
-	imshow("mTotalFloor", mTotalFloor);
+	imshow("image", mTotalFloor);
 	waitKey(0);*/
 
 	//9-Save matrices

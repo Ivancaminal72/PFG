@@ -5,7 +5,7 @@ Source code of my final bachelor's degree project
 
 /capt -> Capturing videos from a camera 
 
-/db -> Labels extraction
+/dbg -> Labels extraction
 
 /meth -> Prominence detection methods using human movement analysis
 

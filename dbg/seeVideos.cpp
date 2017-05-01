@@ -154,6 +154,7 @@ int main( int argc, char* argv[] ) {
 	}
 
 	VideoCapture videoCap(video_path.native());
+	if(!videoCap.isOpened()){cout<<"Error: invalid video "<<video_path<<endl; return -1;}
 	vector<Mat> video;
 	while(videoCap.read(Image)){
 		video.push_back(Image.clone());
