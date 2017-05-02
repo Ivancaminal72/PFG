@@ -192,7 +192,7 @@ int main( int argc, char* argv[] ) {
 	imgSize.width = 640; //640 5
 	imgSize.height = 480; //480 4 
 	double persHeight = 1.6*RPM;//1.6*RPM 3
-	double sensorHeight = 3.1*RPM; //~3*RPM 4
+	double sensorHeight = 3.07*RPM; //3.07*RPM 4
 	Point camCoor(round(5.35*RPM-2.46*RPM),round(3.77*RPM-1.845*RPM));//Point camCoor(3,2);
 	int mWLength = roomSize.width*2+(roomSize.height-2)*2;
 

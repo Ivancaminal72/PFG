@@ -17,9 +17,9 @@ uint8_t inx=4;
 vector<unsigned char> vexp;
 char strBgr[]= "Mark background", strObj[]= "Mark the object", 
 strFin[]= "Press space to finish", strSave[]= "Press 's' to save",
-strMan[]= "Manual mode";
+strMan[]= "Manual mode", strCorr[]= "Position correction";
 bool bgrDrawed = false, objDrawed =false, manual = false;
-Mat markerMask, img, imgt, img0, imgGray, mres;
+Mat markerMask, img, imgt, img0, imgGray, mres, mres_c;
 vector<vector<Point> > contours;
 vector<Vec4i> hierarchy;
 Point prevPt(-1, -1);
@@ -67,12 +67,24 @@ static void onMouse( int event, int x, int y, int flags, void*){
 
 int main( int argc, char** argv ){
     string imgPath, savePath;
-    if(argc < 3 || argc > 4) {
-        cout<<"USAGE:"<<endl<< "./objectSegmentation image_path mask_name"<<endl<<endl;
+    float RPM = 130;
+    float objHeight, sensorHeight = 3.07*RPM;
+    if(argc < 4 || argc > 6) {
+        cout<<"USAGE:"<<endl<< "./objectSegmentation image_path mask_name object_height [sensor_height]"<<endl<<
+        " [relation_pixel_meter]"<<endl<<endl;
+        cout<<"DEFAULT [sensor_height] = "<<sensorHeight/RPM<<"m"<<endl;
+        cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<"pixels/meter"<<endl;
         return -1;
     }else{
          imgPath = argv[1];
          savePath = argv[2];
+         objHeight = atof(argv[3]);
+         if(argc > 4) {
+         	sensorHeight = atof(argv[4]);
+         	if(argc == 6) RPM = atof(argv[5]);
+         	sensorHeight *= RPM;
+         }
+         objHeight = objHeight*RPM;
          savePath = "./masks/"+savePath+".png";
     }
     img0 = imread(imgPath, 1);
@@ -82,9 +94,10 @@ int main( int argc, char** argv ){
     }
     help();
     namedWindow( "image", 1 );
+    cv::Size imgSize = img0.size();
     img0.copyTo(img);
     cvtColor(img, imgGray, COLOR_BGR2GRAY);
-    markerMask = Mat::zeros(img0.size(), CV_8UC1);
+    markerMask = Mat::zeros(imgSize, CV_8UC1);
     imgt=img.clone();
     putText(imgt, strBgr, Point2f(350,470), FONT_HERSHEY_PLAIN, 2,  Scalar(0,0,255,255));
     imshow( "image", imgt );
@@ -146,7 +159,7 @@ int main( int argc, char** argv ){
 				    continue;
 				}
 
-				Mat markers(markerMask.size(), CV_32S);
+				Mat markers(imgSize, CV_32S);
 				markers = Scalar::all(0);
 				int idx = 0;
 				for( ; idx >= 0; idx = hierarchy[idx][0], compCount++ )
@@ -159,7 +172,7 @@ int main( int argc, char** argv ){
 				watershed( img0, markers );
 				t = (double)getTickCount() - t;
 				printf( "execution time = %gms\n", t*1000./getTickFrequency() );
-				mres = Mat::zeros(img0.size(), CV_8UC1);
+				mres = Mat::zeros(imgSize, CV_8UC1);
 				// paint the watershed image
 				for( i = 0; i < markers.rows; i++ )
 				    for( j = 0; j < markers.cols; j++ )
@@ -174,16 +187,36 @@ int main( int argc, char** argv ){
 			}else mres=markerMask;
 
 			
-            img = mres*0.6 + imgGray*0.4;
-            cvtColor(img, img, COLOR_GRAY2BGR);
-            putText(img, strSave, Point2f(300,470), FONT_HERSHEY_PLAIN, 2,  Scalar(0,255,0,255));
-            imshow( "image", img );
-            c = waitKey(0);
+            Point2d pcorr;
+            mres_c = Mat::zeros(imgSize, CV_8UC1);
+			for(int i = 0; i < mres.rows; i++)
+				for(int j = 0; j < mres.cols; j++){
+					if(mres.at<uint8_t>(i,j) == 255){
+						pcorr.x = (double)j - imgSize.width/2;
+						pcorr.y = (double)i - imgSize.height/2;
+						pcorr -= objHeight/sensorHeight*pcorr;
+						pcorr.x += imgSize.width/2;
+						pcorr.y += imgSize.height/2;
+						mres_c.at<uint8_t>(round(pcorr.y), round(pcorr.x)) = 255;
+					}
+				}
+			img = mres*0.4 + mres_c*0.4 + imgGray*0.2;
+			cvtColor(img, img, COLOR_GRAY2BGR);
+			putText(img, strCorr, Point2f(300,470), FONT_HERSHEY_PLAIN, 2,  Scalar(0,0,255,255));
+			imshow( "image", img );
+			c = waitKey(0);
+
+			img = mres*0.6 + imgGray*0.4;
+			cvtColor(img, img, COLOR_GRAY2BGR);
+			putText(img, strSave, Point2f(300,470), FONT_HERSHEY_PLAIN, 2,  Scalar(0,255,0,255));
+			imshow( "image", img );
+			c = waitKey(0);
+
             if( (char)c == 's') {
                 vector<int> compression_params;
                 compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
                 compression_params.push_back(0);
-                imwrite(savePath, mres, compression_params);
+                imwrite(savePath, mres_c, compression_params);
             }
             return 0;
         }
