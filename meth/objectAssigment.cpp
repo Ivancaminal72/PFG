@@ -123,25 +123,32 @@ bool addObjectMask(Mat& mobj, bf::path masks_dir, string& mask_name){
 }
 
 int main( int argc, char* argv[] ) {
-	double hAngle = 90*M_PI/180;//mean horizontal visualCamp (verify >= 90 degrees)
-	double RPM = 130;
+	float RPM = 130, persHeight = 1.6, sensorHeight = 3.07, fAngle = 62;//binocular vision angle
 	string results_file;
 	bf::path masks_dir = "./../omask/masks/", routes_path, save_dir = "./generatedObjectAssigments/";
 
-	if (argc < 2 || argc > 5) {//wrong arguments
-		cout<<"USAGE:"<<endl<< "./objectAssigment rotues_path [results_name] [dir_save/] [dir_obj_masks]"<<endl<<endl;
+	if (argc < 2 || argc > 9) {//wrong arguments
+		cout<<"USAGE:"<<endl<< "./objectAssigment rotues_path [results_name] [dir_save/] [dir_obj_masks] "<<endl<<
+			" [filter_angle] [person_height] [sensor_height] [relation_pixel_meter]"<<endl<<endl;
 		cout<<"DEFAULT [results_name]  = routes_name"<<endl;
 		cout<<"DEFAULT [dir_save/]     = "<<save_dir.native()<<endl;
 		cout<<"DEFAULT [dir_obj_masks] = "<<masks_dir.native()<<endl;
+		cout<<"DEFAULT [filter_angle]  = "<<fAngle<<endl;
+		cout<<"DEFAULT [person_height] = "<<persHeight<<endl;
+		cout<<"DEFAULT [sensor_height] = "<<sensorHeight<<endl;
+		cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<endl;
 		return -1;
 	}else{
 		routes_path = argv[1];
 		if(!bf::exists(routes_path) or !routes_path.has_filename()) {cout<<"Wrong routes_path"<<endl; return -1;}
 		if(argc > 2) {results_file = argv[2]; results_file+=".yml";}
-		else {results_file=routes_path.filename().native();}
+		else results_file=routes_path.filename().native();
 		if(argc > 3) save_dir = argv[3];
-		if(argc == 5) masks_dir = argv[4];
-
+		if(argc > 4) masks_dir = argv[4];
+		if(argc > 5) {fAngle = atof(argv[5]); if(fAngle >= 62 or fAngle<=0) cout<<"Error: wrong fAngle "<<fAngle<<endl;}
+		if(argc > 6) persHeight = atof(argv[6]);
+		if(argc > 7) sensorHeight = atof(argv[7]);
+		if(argc == 9) RPM = atof(argv[8]);
 	}
 
 	//Verify and create correct directories
@@ -173,11 +180,13 @@ int main( int argc, char* argv[] ) {
 		vobj.push_back(o);
 	}
 
+	//Define variables
 	cv::Size imgSize;
 	imgSize.width = 640; //640 5
 	imgSize.height = 480; //480 4
-	double persHeight = 1.6*RPM;//1.6*RPM 3
-	double sensorHeight = 3.1*RPM; //~3*RPM 4
+	persHeight *= RPM;// 3
+	sensorHeight *= RPM; // 4
+	fAngle *= M_PI/180/2;
 
 	//Declare variables
 	int dist, best;
@@ -234,7 +243,7 @@ int main( int argc, char* argv[] ) {
 		best = -1, dist = INT_MAX;
 		for(unsigned int i=0; i<vobj.size(); i++){
 			if(cen_t[i].x > 0){//Filter back points
-				if(abs(atan(cen_t[i].y/cen_t[i].x)) <= hAngle){//Filter by horizontal Angle 
+				if(abs(atan(cen_t[i].y/cen_t[i].x)) <= fAngle){//Filter by binocular vision angle 
 					if(round(cen_t[i].y) < dist){
 						best = i; dist = round(abs(cen_t[i].y));
 					}else if((round(abs(cen_t[i].y)) == round(dist)) and 

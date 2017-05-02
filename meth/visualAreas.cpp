@@ -151,24 +151,29 @@ void replaceWeights(Mat& m, double wNew, double wOld){
 }
 
 int main( int argc, char* argv[] ) {
-	double hAngle = 20*M_PI/180;//mean horizontal visualCamp
-	double RPM = 130;
+	float RPM = 130, room_width_dim = 8.47, room_length_dim = 6.37,
+	sensorHeight = 3.07, persHeight = 1.6, hAngle = 17.5;//horizonal angle
 	string save_file,routes_name;
 	bf::path routes_path, save_dir = "./generatedVisualAreas/";
 
-	if (argc < 2 || argc > 5) {
-	//if (argc < 1 || argc > 5) {
-		cout<<"USAGE:"<<endl<< "./visualAreas rotues_path [horizontal_angle] [save_file] [dir_save/]"<<endl<<endl;
-		cout<<"DEFAULT [horizontal_angle] = 20"<<endl;
+	if (argc < 2 || argc > 11) {
+		cout<<"USAGE:"<<endl<< "./visualAreas rotues_path [horizontal_angle] [save_file] [dir_save/]"<<endl<<
+			"[person_height] [room_height] [room_width] [room_length] [relation_pixel_meter] [room_height]"<<endl<<endl;
+		cout<<"DEFAULT [horizontal_angle] = "<<hAngle<<endl;
 		cout<<"DEFAULT [dir_save/] = "<<save_dir.native()<<endl;
 		cout<<"DEFAULT [save_file] = routes_name+horizontal_angle.yml"<<endl;
+		cout<<"DEFAULT [person_height] = "<<persHeight<<endl;
+		cout<<"DEFAULT [sensor_height] = "<<sensorHeight<<endl;
+		cout<<"DEFAULT [room_width] = "<<room_width_dim<<endl;
+		cout<<"DEFAULT [room_length] = "<<room_length_dim<<endl;
+		cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<endl;
+		cout<<"DEFAULT [room_height] = "<<sensorHeight<<endl;
+
 		return -1;
 	}else{
 		routes_path = argv[1];
-		//routes_path = "/home/ivan/videos/sequences/pack3/routes.yml";
-		//routes_path = "/home/ivan/videos/sequences/pack1/routes/sonia_gasco_original.yml";
 		if(!bf::exists(routes_path) or !routes_path.has_filename()) {cout<<"Wrong routes_path"<<endl; return -1;}
-		if(argc > 2) hAngle = atof(argv[2])*M_PI/180;
+		if(argc > 2) {hAngle = atof(argv[2]); if(hAngle >= 62 or hAngle<=0) cout<<"Error: wrong hAngle "<<hAngle<<endl;}
 		if(argc > 3) {
 			save_file = argv[3];
 			size_t found = save_file.find(".yml");
@@ -176,23 +181,28 @@ int main( int argc, char* argv[] ) {
 				cout<<"Wrong save_file"<<endl;
 				return -1;
 			}
-		}else{
-			
-			save_file=to_string((int)(hAngle*180/M_PI))+"_"+routes_path.filename().native();
 		}
-		if(argc == 5) save_dir = argv[4];
+		else save_file=to_string((int)hAngle)+"_"+routes_path.filename().native();
+		if(argc > 4) save_dir = argv[4];
+		if(argc > 5) persHeight = atof(argv[5]);
+		if(argc > 6) sensorHeight = atof(argv[6]);
+		if(argc > 7) room_width_dim = atof(argv[7]);
+		if(argc > 8) room_length_dim = atof(argv[8]);
+		if(argc > 9) RPM = atof(argv[9]);
+		if(argc == 11) cout<<"Warrning: This version doesn't admit room_height different form sensor_height"<<endl; 
 	}
 
 	//Verify and create correct directories
 	if(!verifyDir(save_dir,true)) return -1;
 
 	cv::Size roomSize, imgSize;
-	roomSize.width = 1101; //1101 8
-	roomSize.height = 828; //828 6
+	roomSize.width = round(room_width_dim*RPM); //1101 8
+	roomSize.height = round(room_length_dim*RPM); //828 6
 	imgSize.width = 640; //640 5
 	imgSize.height = 480; //480 4 
-	double persHeight = 1.6*RPM;//1.6*RPM 3
-	double sensorHeight = 3.07*RPM; //3.07*RPM 4
+	persHeight *= RPM;//3
+	sensorHeight *= RPM; //4
+	hAngle *= M_PI/180/2;
 	Point camCoor(round(5.35*RPM-2.46*RPM),round(3.77*RPM-1.845*RPM));//Point camCoor(3,2);
 	int mWLength = roomSize.width*2+(roomSize.height-2)*2;
 

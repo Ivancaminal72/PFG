@@ -67,11 +67,10 @@ static void onMouse( int event, int x, int y, int flags, void*){
 
 int main( int argc, char** argv ){
     string imgPath, savePath;
-    float RPM = 130;
-    float objHeight, sensorHeight = 3.07*RPM;
+    float objHeight, sensorHeight = 3.07, RPM = 130;
     if(argc < 4 || argc > 6) {
         cout<<"USAGE:"<<endl<< "./objectSegmentation image_path mask_name object_height [sensor_height]"<<endl<<
-        " [relation_pixel_meter]"<<endl<<endl;
+        	" [relation_pixel_meter]"<<endl<<endl;
         cout<<"DEFAULT [sensor_height] = "<<sensorHeight/RPM<<"m"<<endl;
         cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<"pixels/meter"<<endl;
         return -1;
