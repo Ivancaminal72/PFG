@@ -30,9 +30,9 @@ static void onMouse( int event, int x, int y, int flags, void*){
     if( event == EVENT_LBUTTONUP){ //|| !(flags & EVENT_FLAG_LBUTTON) 
         prevPt = Point(-1,-1);
         findContours(markerMask.clone(), contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
-        if((contours.size() == 1) and manual) objDrawed = true;
+        if((contours.size() == 1 or contours.size() == 2) and manual) objDrawed = true;
         else if(contours.size() == 1 and !manual) bgrDrawed = true;
-        else if((contours.size() == 2) and !manual) objDrawed = true;
+        else if(contours.size() == 2 and !manual) objDrawed = true;
         else{
             markerMask = Scalar::all(0);
             img0.copyTo(img);
@@ -66,25 +66,24 @@ static void onMouse( int event, int x, int y, int flags, void*){
 }
 
 int main( int argc, char** argv ){
-    string imgPath, savePath;
-    float objHeight, sensorHeight = 3.07, RPM = 130;
+    string imgPath, savePath, savePath_c, mask_name;
+    float objHeight, sensorHeight = 3.07, RPM = 130.0813;
     if(argc < 4 || argc > 6) {
         cout<<"USAGE:"<<endl<< "./objectSegmentation image_path mask_name object_height [sensor_height]"<<endl<<
         	" [relation_pixel_meter]"<<endl<<endl;
-        cout<<"DEFAULT [sensor_height] = "<<sensorHeight/RPM<<"m"<<endl;
+        cout<<"DEFAULT [sensor_height] = "<<sensorHeight<<"m"<<endl;
         cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<"pixels/meter"<<endl;
         return -1;
     }else{
          imgPath = argv[1];
-         savePath = argv[2];
+         mask_name = argv[2];
          objHeight = atof(argv[3]);
-         if(argc > 4) {
-         	sensorHeight = atof(argv[4]);
-         	if(argc == 6) RPM = atof(argv[5]);
-         	sensorHeight *= RPM;
-         }
-         objHeight = objHeight*RPM;
-         savePath = "./masks/"+savePath+".png";
+         if(argc > 4) sensorHeight = atof(argv[4]);
+         if(argc == 6) RPM = atof(argv[5]);
+         sensorHeight *= RPM;
+         objHeight *= RPM;
+         savePath = "./masks/no_correction/"+mask_name+".png";
+         savePath_c = "./masks/"+mask_name+".png";
     }
     img0 = imread(imgPath, 1);
     if( img0.empty() ){
@@ -215,7 +214,8 @@ int main( int argc, char** argv ){
                 vector<int> compression_params;
                 compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
                 compression_params.push_back(0);
-                imwrite(savePath, mres_c, compression_params);
+                imwrite(savePath, mres, compression_params);
+                imwrite(savePath_c, mres_c, compression_params);
             }
             return 0;
         }
