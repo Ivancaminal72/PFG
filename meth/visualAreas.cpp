@@ -150,46 +150,69 @@ void replaceWeights(Mat& m, double wNew, double wOld){
 	}
 }
 
+bool addObjectMask(Mat& mobj, bf::path masks_dir, string& mask_name){
+	char op;
+	while(1){
+		cout<<endl<<endl<<endl;
+		cout<<"Press 'a' to add new object mask"<<endl;
+		cout<<"Press 'q' to quit and save"<<endl;
+		cin>>op;
+		cin.clear(); cin.ignore();
+		switch (op){
+			case 'a':
+				mask_name="";
+				cout<<"Introduce the name of the PNG objectMask name you want to add"<<endl;
+				cin>>mask_name; 
+				cin.clear(); cin.ignore();
+				if(!bf::exists(masks_dir.native()+mask_name+".png")) {cout<<"Error: "<<masks_dir.native()+mask_name<<" doesn't exist"<<endl; break;}
+				mobj = imread(masks_dir.native()+mask_name+".png", CV_LOAD_IMAGE_GRAYSCALE);
+				if(!mobj.data){cout <<  "Could not open or find the image" <<endl; break;}
+				return true;
+			break;
+			case 'q':
+				return false;
+			break;
+		}
+	}
+}
+
 int main( int argc, char* argv[] ) {
-	float RPM = 130, room_width_dim = 8.47, room_length_dim = 6.37,
-	sensorHeight = 3.07, persHeight = 1.6, hAngle = 17.5;//horizonal angle
-	string save_file,routes_name;
-	bf::path routes_path, save_dir = "./generatedVisualAreas/";
+	float RPM = 130, room_width_dim = 8.47, room_length_dim = 6.37, room_height_dim = 3.12,
+	sensorHeight = 3.07, persHeight = 1.6, hAngle = 35, roomHeight;//horizonal angle
+	string results_file,routes_name;
+	bf::path routes_path, save_dir = "./generatedVisualAreas/",masks_dir = "./../omask/masks/";
 
 	if (argc < 2 || argc > 11) {
-		cout<<"USAGE:"<<endl<< "./visualAreas rotues_path [horizontal_angle] [save_file] [dir_save/]"<<endl<<
-			"[person_height] [room_height] [room_width] [room_length] [relation_pixel_meter] [room_height]"<<endl<<endl;
+		cout<<"USAGE:"<<endl<< "./visualAreas rotues_path [horizontal_angle] [results_name] [dir_obj_masks] " <<endl 
+		<<"[dir_save/] [person_height] [room_height] [room_width] [room_length] "<<endl 
+		<<"[relation_pixel_meter] [sensor_height]"<<endl<<endl;
+
 		cout<<"DEFAULT [horizontal_angle] = "<<hAngle<<endl;
+		cout<<"DEFAULT [results_name] = routes_name"<<endl;
+		cout<<"DEFAULT [dir_obj_masks] = "<<masks_dir.native()<<endl;
 		cout<<"DEFAULT [dir_save/] = "<<save_dir.native()<<endl;
-		cout<<"DEFAULT [save_file] = routes_name+horizontal_angle.yml"<<endl;
 		cout<<"DEFAULT [person_height] = "<<persHeight<<endl;
-		cout<<"DEFAULT [sensor_height] = "<<sensorHeight<<endl;
+		cout<<"DEFAULT [room_height] = "<<room_height_dim<<endl;
 		cout<<"DEFAULT [room_width] = "<<room_width_dim<<endl;
 		cout<<"DEFAULT [room_length] = "<<room_length_dim<<endl;
 		cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<endl;
-		cout<<"DEFAULT [room_height] = "<<sensorHeight<<endl;
-
+		cout<<"DEFAULT [sensor_height] = "<<sensorHeight<<endl;
 		return -1;
+		
 	}else{
 		routes_path = argv[1];
 		if(!bf::exists(routes_path) or !routes_path.has_filename()) {cout<<"Wrong routes_path"<<endl; return -1;}
-		if(argc > 2) {hAngle = atof(argv[2]); if(hAngle >= 62 or hAngle<=0) cout<<"Error: wrong hAngle "<<hAngle<<endl;}
-		if(argc > 3) {
-			save_file = argv[3];
-			size_t found = save_file.find(".yml");
-			if(found == string::npos){
-				cout<<"Wrong save_file"<<endl;
-				return -1;
-			}
-		}
-		else save_file=to_string((int)hAngle)+"_"+routes_path.filename().native();
-		if(argc > 4) save_dir = argv[4];
-		if(argc > 5) persHeight = atof(argv[5]);
-		if(argc > 6) sensorHeight = atof(argv[6]);
-		if(argc > 7) room_width_dim = atof(argv[7]);
-		if(argc > 8) room_length_dim = atof(argv[8]);
-		if(argc > 9) RPM = atof(argv[9]);
-		if(argc == 11) cout<<"Warrning: This version doesn't admit room_height different form sensor_height"<<endl; 
+		if(argc > 2) {hAngle = atof(argv[2]); if(hAngle >= 124 or hAngle<=0) cout<<"Error: wrong hAngle "<<hAngle<<endl;}
+		if(argc > 3) {results_file = argv[3]; results_file+=".yml";}
+		else results_file=routes_path.filename().native();
+		if(argc > 4) masks_dir = argv[4];
+		if(argc > 5) save_dir = argv[5];
+		if(argc > 6) persHeight = atof(argv[6]);
+		if(argc > 7) room_height_dim = atof(argv[7]);
+		if(argc > 8) room_width_dim = atof(argv[8]);
+		if(argc > 9) room_length_dim = atof(argv[9]);
+		if(argc > 10) RPM = atof(argv[10]);
+		if(argc == 12) sensorHeight = atof(argv[11]);
 	}
 
 	//Verify and create correct directories
@@ -202,18 +225,38 @@ int main( int argc, char* argv[] ) {
 	imgSize.height = 480; //480 4 
 	persHeight *= RPM;//3
 	sensorHeight *= RPM; //4
+	roomHeight = room_height_dim*RPM;
 	hAngle *= M_PI/180/2;
-	Point camCoor(round(5.35*RPM-2.46*RPM),round(3.77*RPM-1.845*RPM));//Point camCoor(3,2);
-	int mWLength = roomSize.width*2+(roomSize.height-2)*2;
+	Point camCoor(round(5.35*RPM-imgSize.width/2),round(3.77*RPM-imgSize.height/2));//Point camCoor(3,2);
+
+	/****Obtain object masks****/
+	struct Obj{Mat mask; string name;};
+	Obj o;
+	vector<Obj> vobj;
+	vector<Obj>::iterator oit;
+	Mat mobj, mTotal = Mat::zeros(roomSize, CV_8UC1), mobj_room;
+	while(addObjectMask(mobj, masks_dir, o.name)){
+		mobj_room = Mat::zeros(roomSize, CV_8UC1);
+		mobj.copyTo(mobj_room(Rect(camCoor.x, camCoor.y, imgSize.width, imgSize.height)));
+		mTotal+=mobj_room;
+		o.mask=mobj_room.clone();
+		
+		//cout<<o.name<<endl;
+		vobj.push_back(o);
+	}
+	imshow("image", mTotal);
+	waitKey(0);
+
+	/****Compute visual Areas (this version only floor ones)****/
 
 	//Declare variables
-	int lim1,lim2,cor1,cor2,cor3,cor4,markPxFloor,markPxWalls;
+	int lim1,lim2,cor1,cor2,cor3,cor4,markPxFloor;
 	double tAngle, dist, wFloor, wWalls, wCeiling, aFloor, aWalls, aCeiling;
 	Point2d tpos, ori, prev, act, plim1, plim2, plim3;  //2 dimensions <double> precission
 	Point pver1, pver2, pver3, pver4;
 	vector<Point> vpts, vpts2;
 	vector<Point2d> vplim3;
-	Mat mR, mOri, mAct, mWalls, mFloor, mCeiling, mTotalWalls, mTotalFloor, mTotalCeiling; 
+	Mat mR, mOri, mAct, mFloor, mTotalFloor; 
 	bool correctedAct,firstFunctionDone;
 
 	//Define room vertices
@@ -224,8 +267,6 @@ int main( int argc, char* argv[] ) {
 
 	//Inicialize mTotals
 	mTotalFloor = Mat::zeros(roomSize, CV_64F);
-	mTotalWalls = Mat::zeros(1, mWLength, CV_64F);
-	mTotalCeiling = Mat::zeros(roomSize, CV_64F);
 
 	loadRoutes(routes_path);
 	vector<TrayPoint>::iterator it=rutas.begin();
@@ -378,23 +419,7 @@ int main( int argc, char* argv[] ) {
 			cout<<*ite<<endl;
 		}*/
 
-		//6-Draw mFloor and mWall
-		mWalls = Mat::zeros(1, mWLength, CV_64F);
-		if(lim2<lim1){ 
-
-			for(int i = lim1; i<mWLength; i++){
-				mWalls.at<double>(0,i) = 1;	
-			}
-
-			for(int i = 0; i<=lim2; i++){
-				mWalls.at<double>(0,i) = 1;	
-			}
-		}else{
-			for(int i = lim1; i<=lim2; i++){
-				mWalls.at<double>(0,i) = 1;	
-			}
-		}
-
+		//6-Draw mFloor
 		mFloor = Mat::zeros(roomSize, CV_64F);
 		Point pts[1][vpts.size()];
 		vector<Point>::iterator it2=vpts.begin();
@@ -404,20 +429,13 @@ int main( int argc, char* argv[] ) {
 			posPts+=1;
 		}
 
-		//cv::fillConvexPoly(mFloor, pts, vpts.size(),cv::Scalar(1)); //Leaves some areas not drawed
+		//cv::fillConvexPoly(mFloor, pts, vpts.size(),cv::Scalar(1)); //Leaves some areas not drawn
 		int npt[] = {(int) vpts.size()};
 		const Point* ppt[1] = {pts[0]}; 
 		cv::fillPoly(mFloor, ppt, npt, 1, cv::Scalar(1),8);
-		mCeiling=mFloor.clone();
 
-		//7-Normalize mFoor and mWalls
+		//7-Normalize mFoor
 		markPxFloor = 0;
-		markPxWalls = 0;
-
-		for(int j = 0; j < mWalls.cols; j++){
-			if(mWalls.at<double>(0,j) != 0 and mWalls.at<double>(0,j) != 1) {cout<<"Error: wrong mWalls value"<<endl; return -1;}
-			if(mWalls.at<double>(0,j) != 0) markPxWalls+=1;
-		}
 
 		for(int i = 0; i < mFloor.rows; i++){
 			for(int j = 0; j < mFloor.cols; j++){
@@ -426,7 +444,7 @@ int main( int argc, char* argv[] ) {
 			}
 		} 
 		/* //Logging
-		cout<<markPxFloor<<" "<<markPxWalls<<endl;*/
+		cout<<markPxFloor<<endl;*/
 
 		//--------------find tpos-bounds intersections--------------//
 		cout<<"tAngle: "<<tAngle<<endl;
@@ -500,7 +518,7 @@ int main( int argc, char* argv[] ) {
 		cout<<"Dist: "<<dist<<endl;
 		//--------------calculate weights-------------------------//
 		aFloor = atan(dist/persHeight);
-		aCeiling = atan(dist/(sensorHeight-persHeight));
+		aCeiling = atan(dist/(roomHeight-persHeight));
 		aWalls = M_PI-aFloor-aCeiling;
 
 		wFloor = aFloor/M_PI;
@@ -510,29 +528,23 @@ int main( int argc, char* argv[] ) {
 		cout<<wFloor<<" "<<wCeiling<<" "<<wWalls<<endl;
 
 		//--------------replace weights---------------------------//
-		replaceWeights(mFloor, wFloor, 1);
-		replaceWeights(mWalls, wWalls, 1);
-		replaceWeights(mWalls, wCeiling, 1);
+		replaceWeights(mFloor, wFloor/markPxFloor, 1);
 
-		//Logging
+		/*//Logging
 		imshow("image", mFloor);
-		waitKey(0);
+		waitKey(0);*/
 
 		//8-Add to de total
 		mTotalFloor+=mFloor;
-		mTotalCeiling+=mCeiling;
-		mTotalWalls+=mWalls;
 
 	}
 	mTotalFloor=mTotalFloor*(1/(double)rutas.size());
-	mTotalCeiling=mTotalCeiling*(1/(double)rutas.size());
-	mTotalWalls=mTotalWalls*(1/(double)rutas.size());
 
 	/*//Logging
 	imshow("image", mTotalFloor);
 	waitKey(0);*/
 
-	//9-Save matrices
+	//9-Save mFloor
 	char op;
 	cout<<"Do you want to save result? [y/n]"<<endl;
 	cin>>op;
@@ -541,15 +553,33 @@ int main( int argc, char* argv[] ) {
 		cin>>op;
 	}
 	if(op == 'y'){
+		char buffer [50];
 		cout<<endl<<"Saving Results ";
-		FileStorage fs_result;
-		cout<<save_dir.native()+save_file<<endl;
-		if(fs_result.open(save_dir.native()+save_file, FileStorage::WRITE)){
-			fs_result<<"hAngle"<<(int)(hAngle*180/M_PI);
-			fs_result<<"mTotalFloor"<<mTotalFloor;
-			fs_result<<"mTotalWalls"<<mTotalWalls;
-			fs_result<<"mTotalCeiling"<<mTotalCeiling;
-			fs_result.release();
+		FileStorage fs;
+		cout<<save_dir.native()+results_file<<endl;
+		if(fs.open(save_dir.native()+results_file, FileStorage::WRITE)){
+			time_t rawtime; time(&rawtime);
+	    	fs << "Date"<< asctime(localtime(&rawtime));
+			fs << "RPM" << RPM;
+			fs << "sensor_height" << sensorHeight;
+			fs << "person_height" << persHeight;
+			fs << "horizonal_angle"<< hAngle*180/M_PI*2;
+			fs << "imgSize" << imgSize;
+			fs << "number_objects" << (int) vobj.size();
+			fs << "number_areas" << (int) rutas.size();
+			fs << "objects" << "[";
+			for(oit=vobj.begin(); oit!=vobj.end(); oit++){
+				mFloor = Mat::zeros(roomSize, CV_64F);
+				mTotalFloor.copyTo(mFloor,oit->mask);
+				sprintf (buffer,"%g", sum(mFloor)[0]);
+				fs << "{:" << "punctuation" << buffer << "name" << oit->name 
+				<< "punctuation_f" << sum(mFloor)[0] << "}";
+				
+				cout<<buffer<<" "<<oit->name<<endl;
+			}
+			fs << "]";
+			fs << "mTotalFloor"<<mTotalFloor;
+			fs.release();
 			cout<<"OK!"<<endl;
 		}else{
 			cout<<"ERROR: Can't open for write"<<endl<<endl;

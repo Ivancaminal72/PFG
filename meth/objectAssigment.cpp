@@ -198,7 +198,6 @@ int main( int argc, char* argv[] ) {
 	Point2d tpos;
 	double tAngle;
 	Mat mRot, mTra, mOri, mRes;
-	char buffer [4];
 
 
 	/****Compute the assigments for each Traypoint****/
@@ -262,32 +261,43 @@ int main( int argc, char* argv[] ) {
 	}
 
 	cout<<endl<<"**************RESULTS**************"<<endl<<endl;
-	FileStorage fs;
-	if(fs.open(save_dir.native()+results_file, FileStorage::WRITE)){
-		time_t rawtime; time(&rawtime);
-    	fs << "Date"<< asctime(localtime(&rawtime));
-		fs << "RPM" << RPM;
-		fs << "sensor_height" << sensorHeight;
-		fs << "person_height" << persHeight;
-		fs << "filter_angle" << fAngle*180/M_PI*2;
-		fs << "imgSize" << imgSize;
-		fs << "number_objects" << (int) vobj.size();
-		fs << "number_assigments" << (int) rutas.size();
-		fs << "number_valid_assigments" << validAssigCount;
-		fs << "objects" << "[";
-		for(oit=vobj.begin(); oit!=vobj.end(); oit++){
-			sprintf (buffer,"%.2f", (float) oit->assigments/validAssigCount);
-			fs << "{:" << "punctuation" << buffer << "center" << Point(round(oit->cen.x),(round(oit->cen.y))) 
-			<< "name" << oit->name << "punctuation_f" << (float) oit->assigments/validAssigCount << "}";
-			
-			cout<<buffer<<" "<<Point(round(oit->cen.x),(round(oit->cen.y)))<<" "<<oit->name<<endl;
-		}
-		fs << "]";
-		fs.release();
-		return 0;
+	char op;
+	cout<<"Do you want to save result? [y/n]"<<endl;
+	cin>>op;
+	while(op != 'y' and op != 'n'){
+		cout<<"Invalid option"<<endl;
+		cin>>op;
+	}
+	if(op == 'y'){
+		char buffer [50];
+		cout<<endl<<"Saving Results ";
+		FileStorage fs;
+		if(fs.open(save_dir.native()+results_file, FileStorage::WRITE)){
+			time_t rawtime; time(&rawtime);
+	    	fs << "Date"<< asctime(localtime(&rawtime));
+			fs << "RPM" << RPM;
+			fs << "sensor_height" << sensorHeight;
+			fs << "person_height" << persHeight;
+			fs << "filter_angle" << fAngle*180/M_PI*2;
+			fs << "imgSize" << imgSize;
+			fs << "number_objects" << (int) vobj.size();
+			fs << "number_assigments" << (int) rutas.size();
+			fs << "number_valid_assigments" << validAssigCount;
+			fs << "objects" << "[";
+			for(oit=vobj.begin(); oit!=vobj.end(); oit++){
+				sprintf (buffer,"%.2f", (float) oit->assigments/validAssigCount);
+				fs << "{:" << "punctuation" << buffer << "center" << Point(round(oit->cen.x),(round(oit->cen.y))) 
+				<< "name" << oit->name << "punctuation_f" << (float) oit->assigments/validAssigCount << "}";
+				
+				cout<<buffer<<" "<<Point(round(oit->cen.x),(round(oit->cen.y)))<<" "<<oit->name<<endl;
+			}
+			fs << "]";
+			fs.release();
+			cout<<"OK!"<<endl;
 
-	}else{
-		cout <<"Error opening results save file"<<endl;
-		return -1;
+		}else{
+			cout<<"ERROR: Can't open for write"<<endl<<endl;
+			return -1;
+		}
 	}
 }
