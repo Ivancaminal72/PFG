@@ -123,7 +123,7 @@ bool addObjectMask(Mat& mobj, bf::path masks_dir, string& mask_name){
 }
 
 int main( int argc, char* argv[] ) {
-	float RPM = 130, persHeight = 1.6, sensorHeight = 3.07, fAngle = 62;//binocular vision angle
+	float RPM = 130.0813, persHeight = 1.6, sensorHeight = 3.07, fAngle = 124;//binocular vision angle
 	string results_file;
 	bf::path masks_dir = "./../omask/masks/", routes_path, save_dir = "./generatedObjectAssigments/";
 
@@ -157,42 +157,48 @@ int main( int argc, char* argv[] ) {
 
 	struct Obj{Point2d cen; string name; int assigments=0;};
 	Obj o;
-	Mat mobj;
+	cv::Size imgSize;
+	imgSize.width = 640; //640 5
+	imgSize.height = 480; //480 4
+	Mat mobj, mTotal = Mat::zeros(imgSize, CV_8UC1);;
 	vector<Obj> vobj;
 	vector<Obj>::iterator oit;
 	Moments M;
 	
 	/****Calculate object masks centroids****/
 	while(addObjectMask(mobj, masks_dir, o.name)){
+		mTotal=mTotal+mobj;
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
 		findContours( mobj.clone(), contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
-		if(contours.size()!=1){cout<<"Error: more than one contour found"<<endl; return -1;}
+		if(contours.size()>2){cout<<"Error: more than one contour found"<<endl; return -1;}
 		
 		//Find mask moments
 		M = moments(contours[0]);
 
 		//Get the mass centers
-		o.cen = Point2d(M.m10/M.m00, M.m01/M.m00); 
+		o.cen = Point2d(M.m10/M.m00, M.m01/M.m00);
+		circle(mTotal, o.cen, 1, Scalar(128)); 
 		//cout<<o.cen<<endl; cout.flush();
 		//cout<<o.name<<endl;
 		vobj.push_back(o);
 	}
 
+	imshow("image", mTotal);
+	waitKey(0);
+
 	//Define variables
-	cv::Size imgSize;
-	imgSize.width = 640; //640 5
-	imgSize.height = 480; //480 4
 	persHeight *= RPM;// 3
 	sensorHeight *= RPM; // 4
 	fAngle *= M_PI/180/2;
 
 	//Declare variables
-	int dist, best;
+	int dist, best, validAssigCount=0;
 	Point2d tpos;
 	double tAngle;
 	Mat mRot, mTra, mOri, mRes;
+	char buffer [4];
 
 
 	/****Compute the assigments for each Traypoint****/
@@ -252,10 +258,36 @@ int main( int argc, char* argv[] ) {
 			}
 		}
 
-		if(best != -1) vobj.at(best).assigments += 1;
+		if(best != -1) {vobj.at(best).assigments += 1; validAssigCount+=1;}
 	}
 
-	for(oit=vobj.begin(); oit!=vobj.end(); oit++){
-		cout<<oit->name<<" "<<oit->assigments<<endl;
+	cout<<endl<<"**************RESULTS**************"<<endl<<endl;
+	FileStorage fs;
+	if(fs.open(save_dir.native()+results_file, FileStorage::WRITE)){
+		time_t rawtime; time(&rawtime);
+    	fs << "Date"<< asctime(localtime(&rawtime));
+		fs << "RPM" << RPM;
+		fs << "sensor_height" << sensorHeight;
+		fs << "person_height" << persHeight;
+		fs << "filter_angle" << fAngle*180/M_PI*2;
+		fs << "imgSize" << imgSize;
+		fs << "number_objects" << (int) vobj.size();
+		fs << "number_assigments" << (int) rutas.size();
+		fs << "number_valid_assigments" << validAssigCount;
+		fs << "objects" << "[";
+		for(oit=vobj.begin(); oit!=vobj.end(); oit++){
+			sprintf (buffer,"%.2f", (float) oit->assigments/validAssigCount);
+			fs << "{:" << "punctuation" << buffer << "center" << Point(round(oit->cen.x),(round(oit->cen.y))) 
+			<< "name" << oit->name << "punctuation_f" << (float) oit->assigments/validAssigCount << "}";
+			
+			cout<<buffer<<" "<<Point(round(oit->cen.x),(round(oit->cen.y)))<<" "<<oit->name<<endl;
+		}
+		fs << "]";
+		fs.release();
+		return 0;
+
+	}else{
+		cout <<"Error opening results save file"<<endl;
+		return -1;
 	}
 }
