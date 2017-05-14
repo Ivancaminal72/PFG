@@ -4,8 +4,11 @@
 #include "opencv2/highgui.hpp"
 #include <cstdio>
 #include <iostream>
+#include <boost/filesystem.hpp>
 using namespace cv;
 using namespace std;
+namespace bf = boost::filesystem;
+
 static void help(){
 	cout<<"USE: + to enlarge draw tool"<<endl;
 	cout<<"USE: - to reduce draw tool"<<endl;
@@ -65,8 +68,38 @@ static void onMouse( int event, int x, int y, int flags, void*){
     }
 }
 
+bool verifyDir(bf::path dir, bool doCreation){
+	char op;
+	cout<<endl<<dir<<endl;
+	if(bf::exists(dir)){
+			if(bf::is_directory(dir)){
+				cout<<"Correct directory!"<<endl;
+				return true;
+			}else{
+				cout<<"It is not a directory"<<endl;
+				return false;
+			}
+	}else if(doCreation){
+		cout<<"It doesn't exist"<<endl;
+		cout<<"Do you want to create it? [y/n]"<<endl;
+		cin>>op;
+		if(op == 'y'){
+			if(bf::create_directories(dir)){
+				cout<<"Directory created!"<<endl;
+				return true;
+			}else{
+				cout<<"Error creating directory"<<endl;
+				return false;
+			} 
+		}else return false;
+	}
+	cout<<"It doesn't exist"<<endl;
+	return false;
+}
+
 int main( int argc, char** argv ){
-    string imgPath, savePath, savePath_c, mask_name;
+    string imgPath, mask_name, group_mask;
+    bf::path savePath, savePath_c;
     float objHeight, sensorHeight = 3.07, RPM = 130.0813;
     if(argc < 4 || argc > 6) {
         cout<<"USAGE:"<<endl<< "./objectSegmentation image_path mask_name object_height [sensor_height]"<<endl<<
@@ -82,8 +115,10 @@ int main( int argc, char** argv ){
          if(argc == 6) RPM = atof(argv[5]);
          sensorHeight *= RPM;
          objHeight *= RPM;
-         savePath = "./masks/no_correction/"+mask_name+".png";
-         savePath_c = "./masks/"+mask_name+".png";
+         size_t pos_point = imgPath.find_last_of(".",string::npos);
+         group_mask = imgPath.substr(0,pos_point);
+         savePath = "./masks/"+group_mask+"/no_correction/"+mask_name+".png";
+         savePath_c = "./masks/"+group_mask+"/"+mask_name+".png";
     }
     img0 = imread(imgPath, 1);
     if( img0.empty() ){
@@ -91,6 +126,9 @@ int main( int argc, char** argv ){
         return -1;
     }
     help();
+
+    verifyDir(savePath.parent_path(),true);
+
     namedWindow( "image", 1 );
     cv::Size imgSize = img0.size();
     img0.copyTo(img);
@@ -214,8 +252,8 @@ int main( int argc, char** argv ){
                 vector<int> compression_params;
                 compression_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
                 compression_params.push_back(0);
-                imwrite(savePath, mres, compression_params);
-                imwrite(savePath_c, mres_c, compression_params);
+                imwrite(savePath.native(), mres, compression_params);
+                imwrite(savePath_c.native(), mres_c, compression_params);
             }
             return 0;
         }
