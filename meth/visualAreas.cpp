@@ -179,13 +179,14 @@ bool addObjectMask(Mat& mobj, bf::path masks_dir, string& mask_name){
 int main( int argc, char* argv[] ) {
 	float RPM = 130, room_width_dim = 8.47, room_length_dim = 6.37, room_height_dim = 3.12,
 	sensorHeight = 3.07, persHeight = 1.6, hAngle = 35, roomHeight;//horizonal angle
+	cv::Size imgSize(640,480); // (5 ,4);
 	string results_file,routes_name;
 	bf::path routes_path, save_dir = "./generatedVisualAreas/",masks_dir = "./../omask/masks/";
 
-	if (argc < 2 || argc > 11) {
+	if (argc < 2 || argc > 14) {
 		cout<<"USAGE:"<<endl<< "./visualAreas rotues_path [horizontal_angle] [results_name] [dir_obj_masks] " <<endl 
 		<<"[dir_save/] [person_height] [room_height] [room_width] [room_length] "<<endl 
-		<<"[relation_pixel_meter] [sensor_height]"<<endl<<endl;
+		<<"[relation_pixel_meter] [sensor_height] [image_width_resolution] [image_height_resolution] "<<endl<<endl;
 
 		cout<<"DEFAULT [horizontal_angle] = "<<hAngle<<endl;
 		cout<<"DEFAULT [results_name] = routes_name"<<endl;
@@ -197,6 +198,8 @@ int main( int argc, char* argv[] ) {
 		cout<<"DEFAULT [room_length] = "<<room_length_dim<<endl;
 		cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<endl;
 		cout<<"DEFAULT [sensor_height] = "<<sensorHeight<<endl;
+		cout<<"DEFAULT [image_width_resolution] = "<<imgSize.width<<endl;
+		cout<<"DEFAULT [image_height_resolution] = "<<imgSize.height<<endl;
 		return -1;
 		
 	}else{
@@ -212,17 +215,17 @@ int main( int argc, char* argv[] ) {
 		if(argc > 8) room_width_dim = atof(argv[8]);
 		if(argc > 9) room_length_dim = atof(argv[9]);
 		if(argc > 10) RPM = atof(argv[10]);
-		if(argc == 12) sensorHeight = atof(argv[11]);
+		if(argc > 11) sensorHeight = atof(argv[11]);
+		if(argc > 12) imgSize.width = atoi(argv[12]);
+		if(argc == 14) imgSize.height = atoi(argv[13]);
 	}
 
 	//Verify and create correct directories
 	if(!verifyDir(save_dir,true)) return -1;
 
-	cv::Size roomSize, imgSize;
+	cv::Size roomSize;
 	roomSize.width = round(room_width_dim*RPM); //1101 8
 	roomSize.height = round(room_length_dim*RPM); //828 6
-	imgSize.width = 640; //640 5
-	imgSize.height = 480; //480 4 
 	persHeight *= RPM;//3
 	sensorHeight *= RPM; //4
 	roomHeight = room_height_dim*RPM;
@@ -236,6 +239,7 @@ int main( int argc, char* argv[] ) {
 	vector<Obj>::iterator oit;
 	Mat mobj, mTotal = Mat::zeros(roomSize, CV_8UC1), mobj_room;
 	while(addObjectMask(mobj, masks_dir, o.name)){
+		if(mobj.size() != imgSize){cout<<"Error: routes image size is different from "<<o.name<<" mask size"<<endl; return -1;}
 		mobj_room = Mat::zeros(roomSize, CV_8UC1);
 		mobj.copyTo(mobj_room(Rect(camCoor.x, camCoor.y, imgSize.width, imgSize.height)));
 		mTotal+=mobj_room;

@@ -123,13 +123,15 @@ bool addObjectMask(Mat& mobj, bf::path masks_dir, string& mask_name){
 }
 
 int main( int argc, char* argv[] ) {
-	float RPM = 130.0813, persHeight = 1.6, sensorHeight = 3.07, fAngle = 124;//binocular vision angle
+	float RPM = 130.0813, persHeight = 1.6, sensorHeight = 3.07, fAngle = 124, eAngle = 7;
+	cv::Size imgSize(640,480); // (5 ,4);
 	string results_file;
 	bf::path masks_dir = "./../omask/masks/", routes_path, save_dir = "./generatedObjectAssigments/";
 
-	if (argc < 2 || argc > 9) {//wrong arguments
+	if (argc < 2 || argc > 12) {//wrong arguments
 		cout<<"USAGE:"<<endl<< "./objectAssigment rotues_path [results_name] [dir_save/] [dir_obj_masks] "<<endl<<
-			" [filter_angle] [person_height] [sensor_height] [relation_pixel_meter]"<<endl<<endl;
+			" [filter_angle] [person_height] [sensor_height] [relation_pixel_meter] [error_angle] "<<endl<<
+			" [image_width_resolution] [image_height_resolution] "<<endl<<endl;
 		cout<<"DEFAULT [results_name]  = routes_name"<<endl;
 		cout<<"DEFAULT [dir_save/]     = "<<save_dir.native()<<endl;
 		cout<<"DEFAULT [dir_obj_masks] = "<<masks_dir.native()<<endl;
@@ -137,6 +139,9 @@ int main( int argc, char* argv[] ) {
 		cout<<"DEFAULT [person_height] = "<<persHeight<<endl;
 		cout<<"DEFAULT [sensor_height] = "<<sensorHeight<<endl;
 		cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<endl;
+		cout<<"DEFAULT [error_angle] = "<<eAngle<<endl;
+		cout<<"DEFAULT [image_width_resolution] = "<<imgSize.width<<endl;
+		cout<<"DEFAULT [image_height_resolution] = "<<imgSize.height<<endl;
 		return -1;
 	}else{
 		routes_path = argv[1];
@@ -145,10 +150,13 @@ int main( int argc, char* argv[] ) {
 		else results_file=routes_path.filename().native();
 		if(argc > 3) save_dir = argv[3];
 		if(argc > 4) masks_dir = argv[4];
-		if(argc > 5) {fAngle = atof(argv[5]); if(fAngle >= 62 or fAngle<=0) cout<<"Error: wrong fAngle "<<fAngle<<endl;}
+		if(argc > 5) {fAngle = atof(argv[5]); if(fAngle >= 124 or fAngle<=0) cout<<"Error: wrong fAngle "<<fAngle<<endl; return -1;}
 		if(argc > 6) persHeight = atof(argv[6]);
 		if(argc > 7) sensorHeight = atof(argv[7]);
-		if(argc == 9) RPM = atof(argv[8]);
+		if(argc > 8) RPM = atof(argv[8]);
+		if(argc > 9) imgSize.width = atoi(argv[9]);
+		if(argc > 10) imgSize.height = atoi(argv[10]);
+		if(argc == 12) {eAngle = atof(argv[9]); if(eAngle >= 55 or eAngle<0) cout<<"Error: wrong eAngle "<<eAngle<<endl; return -1;}
 	}
 
 	//Verify and create correct directories
@@ -157,9 +165,6 @@ int main( int argc, char* argv[] ) {
 
 	struct Obj{Point2d cen; string name; int assigments=0;};
 	Obj o;
-	cv::Size imgSize;
-	imgSize.width = 640; //640 5
-	imgSize.height = 480; //480 4
 	Mat mobj, mTotal = Mat::zeros(imgSize, CV_8UC1);;
 	vector<Obj> vobj;
 	vector<Obj>::iterator oit;
@@ -170,6 +175,9 @@ int main( int argc, char* argv[] ) {
 		mTotal=mTotal+mobj;
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
+
+		if(mobj.size() != imgSize){cout<<"Error: routes image size is different from "<<o.name<<" mask size"<<endl; return -1;}
+
 		findContours( mobj.clone(), contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
 		if(contours.size()>2){cout<<"Error: more than one contour found"<<endl; return -1;}
@@ -192,6 +200,8 @@ int main( int argc, char* argv[] ) {
 	persHeight *= RPM;// 3
 	sensorHeight *= RPM; // 4
 	fAngle *= M_PI/180/2;
+	eAngle *= M_PI/180;
+	fAngle += eAngle;
 
 	//Declare variables
 	int dist, best, validAssigCount=0;
