@@ -130,8 +130,8 @@ int main( int argc, char* argv[] ) {
 
 	if (argc < 2 || argc > 12) {//wrong arguments
 		cout<<"USAGE:"<<endl<< "./objectAssigment rotues_path [results_name] [dir_save/] [dir_obj_masks] "<<endl<<
-			" [filter_angle] [person_height] [sensor_height] [relation_pixel_meter] [error_angle] "<<endl<<
-			" [image_width_resolution] [image_height_resolution] "<<endl<<endl;
+			" [filter_angle] [person_height] [sensor_height] [relation_pixel_meter] "<<endl<<
+			" [error_angle] [image_width_resolution] [image_height_resolution] "<<endl<<endl;
 		cout<<"DEFAULT [results_name]  = routes_name"<<endl;
 		cout<<"DEFAULT [dir_save/]     = "<<save_dir.native()<<endl;
 		cout<<"DEFAULT [dir_obj_masks] = "<<masks_dir.native()<<endl;
@@ -163,7 +163,7 @@ int main( int argc, char* argv[] ) {
 	if(!verifyDir(save_dir,true)) return -1;
 	if(!verifyDir(masks_dir,false)) return -1;
 
-	struct Obj{Point2d cen; string name; int assigments=0;};
+	struct Obj{Point2d cen; string name; float assigments=0;};
 	Obj o;
 	Mat mobj, mTotal = Mat::zeros(imgSize, CV_8UC1);;
 	vector<Obj> vobj;
@@ -193,8 +193,10 @@ int main( int argc, char* argv[] ) {
 		vobj.push_back(o);
 	}
 
+	/*Logging
 	imshow("image", mTotal);
 	waitKey(0);
+	*/
 
 	//Define variables
 	persHeight *= RPM;// 3
@@ -204,10 +206,11 @@ int main( int argc, char* argv[] ) {
 	fAngle += eAngle;
 
 	//Declare variables
-	int dist, best, validAssigCount=0;
+	int sumDist, validAssigCount=0;
 	Point2d tpos;
 	double tAngle;
 	Mat mRot, mTra, mOri, mRes;
+	vector<unsigned int> vindx;
 
 
 	/****Compute the assigments for each Traypoint****/
@@ -254,20 +257,24 @@ int main( int argc, char* argv[] ) {
 			//cout<<" "<<cen_t[i]<<endl;
 		}
 
-		//3-Do the assigment
-		best = -1, dist = INT_MAX;
+		//3-Do the assigments
+		sumDist = 0; 
 		for(unsigned int i=0; i<vobj.size(); i++){
 			if(cen_t[i].x > 0){//Filter back points
 				if(abs(atan(cen_t[i].y/cen_t[i].x)) <= fAngle){//Filter by binocular vision angle 
-					if(round(cen_t[i].y) < dist){
-						best = i; dist = round(abs(cen_t[i].y));
-					}else if((round(abs(cen_t[i].y)) == round(dist)) and 
-						(round(cen_t[i].x) < round(cen_t[best].x))) best = i;
+					sumDist += round(abs(cen_t[i].y));
+					vindx.push_back(i);
 				}
 			}
 		}
+		if(vindx.size() != 0) {
+			for(unsigned int i=0; i<vindx.size(); i++){		
+				vobj.at(vindx.at(i)).assigments += (float) round(abs(cen_t[vindx.at(i)].y))/sumDist;
 
-		if(best != -1) {vobj.at(best).assigments += 1; validAssigCount+=1;}
+			}
+			validAssigCount+=1;
+		}
+		vindx.clear();
 	}
 
 	cout<<endl<<"**************RESULTS**************"<<endl<<endl;
@@ -280,7 +287,7 @@ int main( int argc, char* argv[] ) {
 	}
 	if(op == 'y'){
 		char buffer [50];
-		cout<<endl<<"Saving Results ";
+		cout<<endl<<"Saving Results "<<endl;
 		FileStorage fs;
 		if(fs.open(save_dir.native()+results_file, FileStorage::WRITE)){
 			time_t rawtime; time(&rawtime);
@@ -288,7 +295,8 @@ int main( int argc, char* argv[] ) {
 			fs << "RPM" << RPM;
 			fs << "sensor_height" << sensorHeight;
 			fs << "person_height" << persHeight;
-			fs << "filter_angle" << fAngle*180/M_PI*2;
+			fs << "filter_angle" << fAngle*180/M_PI*2 - eAngle*180/M_PI;
+			fs << "error_angle" << eAngle*180/M_PI;
 			fs << "imgSize" << imgSize;
 			fs << "number_objects" << (int) vobj.size();
 			fs << "number_assigments" << (int) rutas.size();
