@@ -173,18 +173,9 @@ int main( int argc, char* argv[] ) {
 	/****Calculate object masks centroids****/
 	while(addObjectMask(mobj, masks_dir, o.name)){
 		mTotal=mTotal+mobj;
-		vector<vector<Point> > contours;
-		vector<Vec4i> hierarchy;
 
-		if(mobj.size() != imgSize){cout<<"Error: routes image size is different from "<<o.name<<" mask size"<<endl; return -1;}
-
-		findContours( mobj.clone(), contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
-
-		if(contours.size()>2){cout<<"Error: more than one contour found"<<endl; return -1;}
-		
 		//Find mask moments
-		M = moments(contours[0]);
-
+		M = moments(mobj, true);
 		//Get the mass centers
 		o.cen = Point2d(M.m10/M.m00, M.m01/M.m00);
 		circle(mTotal, o.cen, 1, Scalar(128)); 
@@ -193,10 +184,9 @@ int main( int argc, char* argv[] ) {
 		vobj.push_back(o);
 	}
 
-	/*Logging
+	/*//Logging
 	imshow("image", mTotal);
-	waitKey(0);
-	*/
+	waitKey(0);*/
 
 	//Define variables
 	persHeight *= RPM;// 3

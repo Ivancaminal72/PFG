@@ -195,9 +195,10 @@ int main( int argc, char* argv[] ) {
 		err_a=err_a/count;
 		
 		cout<<"Average error between routes: "<<endl;
-		cout<<"Point_x: "<<err_x<<endl;
-		cout<<"Point_y: "<<err_y<<endl;
-		cout<<"Angles:  "<<err_a<<endl;
+		printf ("Point_x: %g \n", err_x);
+		printf ("Point_y: %g \n", err_y);
+		printf ("Angles: %g \n", err_a);
+
 	}
 
 	vector<Mat>::iterator it=video.begin();
