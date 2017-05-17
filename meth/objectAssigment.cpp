@@ -154,9 +154,9 @@ int main( int argc, char* argv[] ) {
 		if(argc > 6) persHeight = atof(argv[6]);
 		if(argc > 7) sensorHeight = atof(argv[7]);
 		if(argc > 8) RPM = atof(argv[8]);
-		if(argc > 9) imgSize.width = atoi(argv[9]);
-		if(argc > 10) imgSize.height = atoi(argv[10]);
-		if(argc == 12) {eAngle = atof(argv[9]); if(eAngle >= 55 or eAngle<0) cout<<"Error: wrong eAngle "<<eAngle<<endl; return -1;}
+		if(argc > 9) {eAngle = atof(argv[9]); if(eAngle >= 55 or eAngle<0) cout<<"Error: wrong eAngle "<<eAngle<<endl; return -1;}
+		if(argc > 10) imgSize.width = atoi(argv[10]);
+		if(argc == 12) imgSize.height = atoi(argv[11]);
 	}
 
 	//Verify and create correct directories

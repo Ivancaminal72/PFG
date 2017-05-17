@@ -178,15 +178,17 @@ bool addObjectMask(Mat& mobj, bf::path masks_dir, string& mask_name){
 
 int main( int argc, char* argv[] ) {
 	float RPM = 130, room_width_dim = 8.47, room_length_dim = 6.37, room_height_dim = 3.12,
-	sensorHeight = 3.07, persHeight = 1.6, hAngle = 35, roomHeight;//horizonal angle
+	sensorHeight = 3.07, persHeight = 1.6, hAngle = 35, roomHeight, forehead_dim = 0.14, persEyesHeight,
+	eAngle = 7; 
 	cv::Size imgSize(640,480); // (5 ,4);
 	string results_file,routes_name;
 	bf::path routes_path, save_dir = "./generatedVisualAreas/",masks_dir = "./../omask/masks/";
 
-	if (argc < 2 || argc > 14) {
+	if (argc < 2 || argc > 15) {
 		cout<<"USAGE:"<<endl<< "./visualAreas rotues_path [horizontal_angle] [results_name] [dir_obj_masks] " <<endl 
 		<<"[dir_save/] [person_height] [room_height] [room_width] [room_length] "<<endl 
-		<<"[relation_pixel_meter] [sensor_height] [image_width_resolution] [image_height_resolution] "<<endl<<endl;
+		<<"[relation_pixel_meter] [sensor_height] [error_angle] [image_width_resolution] "<<endl
+		<<"[image_height_resolution] "<<endl<<endl;
 
 		cout<<"DEFAULT [horizontal_angle] = "<<hAngle<<endl;
 		cout<<"DEFAULT [results_name] = routes_name"<<endl;
@@ -198,6 +200,7 @@ int main( int argc, char* argv[] ) {
 		cout<<"DEFAULT [room_length] = "<<room_length_dim<<endl;
 		cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<endl;
 		cout<<"DEFAULT [sensor_height] = "<<sensorHeight<<endl;
+		cout<<"DEFAULT [error_angle] = "<<eAngle<<endl;
 		cout<<"DEFAULT [image_width_resolution] = "<<imgSize.width<<endl;
 		cout<<"DEFAULT [image_height_resolution] = "<<imgSize.height<<endl;
 		return -1;
@@ -216,8 +219,9 @@ int main( int argc, char* argv[] ) {
 		if(argc > 9) room_length_dim = atof(argv[9]);
 		if(argc > 10) RPM = atof(argv[10]);
 		if(argc > 11) sensorHeight = atof(argv[11]);
-		if(argc > 12) imgSize.width = atoi(argv[12]);
-		if(argc == 14) imgSize.height = atoi(argv[13]);
+		if(argc > 12) {eAngle = atof(argv[12]); if(eAngle >= 55 or eAngle<0) cout<<"Error: wrong eAngle "<<eAngle<<endl; return -1;}
+		if(argc > 13) imgSize.width = atoi(argv[13]);
+		if(argc == 15) imgSize.height = atoi(argv[14]);
 	}
 
 	//Verify and create correct directories
@@ -228,8 +232,12 @@ int main( int argc, char* argv[] ) {
 	roomSize.height = round(room_length_dim*RPM); //828 6
 	persHeight *= RPM;//3
 	sensorHeight *= RPM; //4
+	forehead_dim *= RPM;
+	persEyesHeight = persHeight - forehead_dim;
 	roomHeight = room_height_dim*RPM;
 	hAngle *= M_PI/180/2;
+	eAngle *= M_PI/180;
+	hAngle += eAngle;
 	Point camCoor(round(5.35*RPM-imgSize.width/2),round(3.77*RPM-imgSize.height/2));//Point camCoor(3,2);
 
 	/****Obtain object masks****/
@@ -312,7 +320,7 @@ int main( int argc, char* argv[] ) {
 
 			//--------------compute new function point--------//
 			prev=act;
-			ori.y=tan(hAngle)*sqrt(pow(persHeight,2)+pow(ori.x,2));
+			ori.y=tan(hAngle)*sqrt(pow(persEyesHeight,2)+pow(ori.x,2));
 			if(firstFunctionDone) ori.y*=-1.0;
 			mOri = (Mat_<double>(2,1)<<ori.x,ori.y);
 			mAct = mR*mOri;
@@ -521,8 +529,8 @@ int main( int argc, char* argv[] ) {
 
 		cout<<"Dist: "<<dist<<endl;
 		//--------------calculate weights-------------------------//
-		aFloor = atan(dist/persHeight);
-		aCeiling = atan(dist/(roomHeight-persHeight));
+		aFloor = atan(dist/persEyesHeight);
+		aCeiling = atan(dist/(roomHeight-persEyesHeight));
 		aWalls = M_PI-aFloor-aCeiling;
 
 		wFloor = aFloor/M_PI;
@@ -567,7 +575,9 @@ int main( int argc, char* argv[] ) {
 			fs << "RPM" << RPM;
 			fs << "sensor_height" << sensorHeight;
 			fs << "person_height" << persHeight;
-			fs << "horizonal_angle"<< hAngle*180/M_PI*2;
+			fs << "person_eyes_height" << persEyesHeight;
+			fs << "horizonal_angle"<< hAngle*180/M_PI*2 - eAngle*180/M_PI;
+			fs << "error_angle" << eAngle*180/M_PI;
 			fs << "imgSize" << imgSize;
 			fs << "number_objects" << (int) vobj.size();
 			fs << "number_areas" << (int) rutas.size();
