@@ -100,7 +100,7 @@ bool verifyDir(bf::path dir, bool doCreation){
 int main( int argc, char** argv ){
     string imgPath, mask_name, group_mask;
     bf::path savePath, savePath_c;
-    float objHeight, sensorHeight = 3.07, RPM = 130.0813;
+    float objHeight, sensorHeight = 3.07, RPM = 172.9729;
     if(argc < 4 || argc > 6) {
         cout<<"USAGE:"<<endl<< "./objectSegmentation image_path mask_name object_height [sensor_height]"<<endl<<
         	" [relation_pixel_meter]"<<endl<<endl;

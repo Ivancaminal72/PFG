@@ -163,7 +163,7 @@ int main( int argc, char* argv[] ) {
 	if(!verifyDir(save_dir,true)) return -1;
 	if(!verifyDir(masks_dir,false)) return -1;
 
-	struct Obj{Point2d cen; string name; float assigments=0;};
+	struct Obj{Point2d cen; string name; double assigments=0;};
 	Obj o;
 	Mat mobj, mTotal = Mat::zeros(imgSize, CV_8UC1);;
 	vector<Obj> vobj;
@@ -196,7 +196,7 @@ int main( int argc, char* argv[] ) {
 	fAngle += eAngle;
 
 	//Declare variables
-	int sumDist, validAssigCount=0;
+	int sum, validAssigCount=0;
 	Point2d tpos;
 	double tAngle;
 	Mat mRot, mTra, mOri, mRes;
@@ -248,18 +248,18 @@ int main( int argc, char* argv[] ) {
 		}
 
 		//3-Do the assigments
-		sumDist = 0; 
+		sum = 0; 
 		for(unsigned int i=0; i<vobj.size(); i++){
 			if(cen_t[i].x > 0){//Filter back points
 				if(abs(atan(cen_t[i].y/cen_t[i].x)) <= fAngle){//Filter by binocular vision angle 
-					sumDist += round(abs(cen_t[i].y));
+					sum += fAngle - abs(atan(cen_t[i].y/cen_t[i].x));
 					vindx.push_back(i);
 				}
 			}
 		}
 		if(vindx.size() != 0) {
 			for(unsigned int i=0; i<vindx.size(); i++){		
-				vobj.at(vindx.at(i)).assigments += (float) round(abs(cen_t[vindx.at(i)].y))/sumDist;
+				vobj.at(vindx.at(i)).assigments += (fAngle - abs(atan(cen_t[vindx.at(i)].y/cen_t[vindx.at(i)].x)))/sum;
 
 			}
 			validAssigCount+=1;
