@@ -10,3 +10,5 @@ Source code of my final bachelor's degree project
 /meth -> Prominence detection methods using human movement analysis
 
 /omask -> Object segmentation
+
+/err -> Mesures of image quality (PSNR /MSE)
