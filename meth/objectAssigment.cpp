@@ -196,9 +196,9 @@ int main( int argc, char* argv[] ) {
 	fAngle += eAngle;
 
 	//Declare variables
-	int sum, validAssigCount=0;
+	int validAssigCount=0;
 	Point2d tpos;
-	double tAngle;
+	double tAngle, sum;
 	Mat mRot, mTra, mOri, mRes;
 	vector<unsigned int> vindx;
 
@@ -251,7 +251,7 @@ int main( int argc, char* argv[] ) {
 		sum = 0; 
 		for(unsigned int i=0; i<vobj.size(); i++){
 			if(cen_t[i].x > 0){//Filter back points
-				if(abs(atan(cen_t[i].y/cen_t[i].x)) <= fAngle){//Filter by binocular vision angle 
+				if(abs(atan(cen_t[i].y/cen_t[i].x)) < fAngle){//Filter by binocular vision angle 
 					sum += fAngle - abs(atan(cen_t[i].y/cen_t[i].x));
 					vindx.push_back(i);
 				}
@@ -260,7 +260,6 @@ int main( int argc, char* argv[] ) {
 		if(vindx.size() != 0) {
 			for(unsigned int i=0; i<vindx.size(); i++){		
 				vobj.at(vindx.at(i)).assigments += (fAngle - abs(atan(cen_t[vindx.at(i)].y/cen_t[vindx.at(i)].x)))/sum;
-
 			}
 			validAssigCount+=1;
 		}
@@ -293,9 +292,9 @@ int main( int argc, char* argv[] ) {
 			fs << "number_valid_assigments" << validAssigCount;
 			fs << "objects" << "[";
 			for(oit=vobj.begin(); oit!=vobj.end(); oit++){
-				sprintf (buffer,"%.2f", (float) oit->assigments/validAssigCount);
+				sprintf (buffer,"%.2f", oit->assigments/validAssigCount);
 				fs << "{:" << "punctuation" << buffer << "center" << Point(round(oit->cen.x),(round(oit->cen.y))) 
-				<< "name" << oit->name << "punctuation_f" << (float) oit->assigments/validAssigCount << "}";
+				<< "name" << oit->name << "punctuation_f" << oit->assigments/validAssigCount << "}";
 				
 				cout<<buffer<<" "<<Point(round(oit->cen.x),(round(oit->cen.y)))<<" "<<oit->name<<endl;
 			}
