@@ -77,10 +77,10 @@ bool loadRotesAndDrawArrows(bf::path loadRoutesPath, vector<Mat>& video, Scalar 
 						arrPoint.x=t.pos.x+round(arrowLength*cos(t.angle*M_PI/180));
 						arrPoint.y=t.pos.y-round(arrowLength*sin(t.angle*M_PI/180));
 					}
-					if((uint) t.frame < video.size()-1 and !video.empty()){
+					if((uint) t.frame < video.size() and !video.empty()){
 						draw_arrow(video.at(t.frame), t.pos, arrPoint, color);
 
-						if(count < vrecs.size()-1 and !vrecs.empty()) {
+						if(count < vrecs.size() and !vrecs.empty()) {
 							draw_box(video.at(t.frame), vrecs.at(count), color);
 						}
 						count+=1;

@@ -215,7 +215,7 @@ int main( int argc, char* argv[] ) {
 	Mat img,uimg, cameraMatrix, distCoeffs;
 
 	if (argc < 3 || argc > 10) {//wrong arguments
-		cout<<"USAGE:"<<endl<< "./routesReCalibrate sequence_name camera_calibration_path [pack_name] \n"; 
+		cout<<"USAGE:"<<endl<< "./routesUndistort sequence_name camera_calibration_path [pack_name] \n"; 
 		cout<<"[dir_save/] [dir_packs/] [routes_path] [angles_path] [cascades_path] \n[video_path]"<<endl<<endl;
 		cout<<"DEFAULT [pack_name] = sequence_name"<<endl;
 		cout<<"DEFAULT [dir_save/] = "<<seq_dir<<endl;

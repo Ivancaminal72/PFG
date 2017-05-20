@@ -178,8 +178,8 @@ bool addObjectMask(Mat& mobj, bf::path masks_dir, string& mask_name){
 
 int main( int argc, char* argv[] ) {
 	float RPM = 130, room_width_dim = 8.47, room_length_dim = 6.37, room_height_dim = 3.12,
-	sensorHeight = 3.07, persHeight = 1.6, hAngle = 35, roomHeight, forehead_dim = 0.14, persEyesHeight,
-	eAngle = 7; 
+	sensorHeight = 3.07, persHeight = 1.6, hAngle = 124, roomHeight, forehead_dim = 0.14, persEyesHeight,
+	eAngle = 5;
 	cv::Size imgSize(640,480); // (5 ,4);
 	string results_file,routes_name;
 	bf::path routes_path, save_dir = "./generatedVisualAreas/",masks_dir = "./../omask/masks/";
@@ -208,7 +208,7 @@ int main( int argc, char* argv[] ) {
 	}else{
 		routes_path = argv[1];
 		if(!bf::exists(routes_path) or !routes_path.has_filename()) {cout<<"Wrong routes_path"<<endl; return -1;}
-		if(argc > 2) {hAngle = atof(argv[2]); if(hAngle >= 124 or hAngle<=0) cout<<"Error: wrong hAngle "<<hAngle<<endl;}
+		if(argc > 2) {hAngle = atof(argv[2]); if(hAngle > 114 or hAngle<=0) cout<<"Error: wrong hAngle "<<hAngle<<endl;}
 		if(argc > 3) {results_file = argv[3]; results_file+=".yml";}
 		else results_file=routes_path.filename().native();
 		if(argc > 4) masks_dir = argv[4];
@@ -241,7 +241,7 @@ int main( int argc, char* argv[] ) {
 	Point camCoor(round(5.35*RPM-imgSize.width/2),round(3.77*RPM-imgSize.height/2));//Point camCoor(3,2);
 
 	/****Obtain object masks****/
-	struct Obj{Mat mask; string name;};
+	struct Obj{Mat mask; string name; double punctuation;};
 	Obj o;
 	vector<Obj> vobj;
 	vector<Obj>::iterator oit;
@@ -256,8 +256,8 @@ int main( int argc, char* argv[] ) {
 		//cout<<o.name<<endl;
 		vobj.push_back(o);
 	}
-	imshow("image", mTotal);
-	waitKey(0);
+	/*imshow("image", mTotal);
+	waitKey(0);*/
 
 	/****Compute visual Areas (this version only floor ones)****/
 
@@ -446,6 +446,12 @@ int main( int argc, char* argv[] ) {
 		const Point* ppt[1] = {pts[0]}; 
 		cv::fillPoly(mFloor, ppt, npt, 1, cv::Scalar(1),8);
 
+		if(it==rutas.begin()){//Logging
+			imshow("image", mFloor);
+			waitKey(0);
+		}
+
+
 		//7-Normalize mFoor
 		markPxFloor = 0;
 
@@ -539,12 +545,11 @@ int main( int argc, char* argv[] ) {
 
 		cout<<wFloor<<" "<<wCeiling<<" "<<wWalls<<endl;
 
+		
 		//--------------replace weights---------------------------//
 		replaceWeights(mFloor, wFloor/markPxFloor, 1);
 
-		/*//Logging
-		imshow("image", mFloor);
-		waitKey(0);*/
+		
 
 		//8-Add to de total
 		mTotalFloor+=mFloor;
@@ -565,7 +570,8 @@ int main( int argc, char* argv[] ) {
 		cin>>op;
 	}
 	if(op == 'y'){
-		char buffer [50];
+		char buffer [50]; 
+		double totalP=0;
 		cout<<endl<<"Saving Results ";
 		FileStorage fs;
 		cout<<save_dir.native()+results_file<<endl;
@@ -585,13 +591,20 @@ int main( int argc, char* argv[] ) {
 			for(oit=vobj.begin(); oit!=vobj.end(); oit++){
 				mFloor = Mat::zeros(roomSize, CV_64F);
 				mTotalFloor.copyTo(mFloor,oit->mask);
-				sprintf (buffer,"%g", sum(mFloor)[0]);
-				fs << "{:" << "punctuation" << buffer << "name" << oit->name 
-				<< "punctuation_f" << sum(mFloor)[0] << "}";
+				oit->punctuation = sum(mFloor)[0];
+				totalP += oit->punctuation;
+			}
+
+			for(oit=vobj.begin(); oit!=vobj.end(); oit++){
+				sprintf (buffer,"%.2f", oit->punctuation/totalP);
+				fs << "{:" << "punctuation_n" << buffer << "name" << oit->name 
+				<< "punctuation_f" << oit->punctuation 
+				<< "punctuation_fn" << oit->punctuation/totalP << "}";
 				
 				cout<<buffer<<" "<<oit->name<<endl;
 			}
 			fs << "]";
+			fs << "totalPunctuation"<<totalP;
 			fs << "mTotalFloor"<<mTotalFloor;
 			fs.release();
 			cout<<"OK!"<<endl;
