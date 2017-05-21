@@ -21,6 +21,8 @@ struct TrayPoint{
 	float angle;
 };
 vector<TrayPoint> rutas;
+vector<bf::path> all_masks;
+bool b_all = false;
 
 bool verifyDir(bf::path dir, bool doCreation){
 	char op;
@@ -100,24 +102,42 @@ bool addObjectMask(Mat& mobj, bf::path masks_dir, string& mask_name){
 	char op;
 	while(1){
 		cout<<endl<<endl<<endl;
-		cout<<"Press 'a' to add new object mask"<<endl;
-		cout<<"Press 'q' to quit and save"<<endl;
-		cin>>op;
-		cin.clear(); cin.ignore();
-		switch (op){
-			case 'a':
-				mask_name="";
-				cout<<"Introduce the name of the PNG objectMask name you want to add"<<endl;
-				cin>>mask_name; 
-				cin.clear(); cin.ignore();
-				if(!bf::exists(masks_dir.native()+mask_name+".png")) {cout<<"Error: "<<masks_dir.native()+mask_name<<" doesn't exist"<<endl; break;}
-				mobj = imread(masks_dir.native()+mask_name+".png", CV_LOAD_IMAGE_GRAYSCALE);
-				if(!mobj.data){cout <<  "Could not open or find the image" <<endl; break;}
-				return true;
-			break;
-			case 'q':
-				return false;
-			break;
+		if(all_masks.empty() and !b_all){
+			cout<<"Press 'n' to add new object mask"<<endl;
+			cout<<"Press 'a' to add all object masks in the directory"<<endl;
+			cout<<"Press 'q' to quit and save"<<endl;
+			cin>>op;
+			cin.clear(); cin.ignore();
+			switch (op){
+				case 'n':
+					mask_name="";
+					cout<<"Introduce the name of the PNG objectMask name you want to add"<<endl;
+					cin>>mask_name; 
+					cin.clear(); cin.ignore();
+					if(!bf::exists(masks_dir.native()+mask_name+".png")) {cout<<"Error: "<<masks_dir.native()+mask_name<<" doesn't exist"<<endl; break;}
+					mobj = imread(masks_dir.native()+mask_name+".png", CV_LOAD_IMAGE_GRAYSCALE);
+					if(!mobj.data){cout << "Could not open or find the image" <<endl; break;}
+					return true;
+				break;
+				case 'a':
+					std::copy(bf::directory_iterator(masks_dir), bf::directory_iterator(), back_inserter(all_masks));
+					b_all = true;
+				break;
+				case 'q':
+					return false;
+				break;
+			}
+		}else if(all_masks.empty() and b_all){
+			return false;
+		}else{
+			mask_name = all_masks.back().filename().native();
+			cout<<"Loading "<<mask_name<<endl;
+			all_masks.pop_back();
+			if(mask_name.find(".png") == string::npos) return true;
+			mobj = imread(masks_dir.native()+mask_name, CV_LOAD_IMAGE_GRAYSCALE);
+			if(!mobj.data){cout << "Could not open or find the image" <<endl; exit(-1);}
+			cout<<"OK!"<<endl;
+			return true;
 		}
 	}
 }
