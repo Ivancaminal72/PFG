@@ -186,8 +186,12 @@ bool addObjectMask(Mat& mobj, bf::path masks_dir, string& mask_name){
 		}else{
 			mask_name = all_masks.back().filename().native();
 			cout<<"Loading "<<mask_name<<endl;
+			while(mask_name.find(".png") == string::npos){
+				all_masks.pop_back();
+				if(all_masks.empty()) return false;
+				else mask_name = all_masks.back().filename().native();
+			}
 			all_masks.pop_back();
-			if(mask_name.find(".png") == string::npos) return true;
 			mobj = imread(masks_dir.native()+mask_name, CV_LOAD_IMAGE_GRAYSCALE);
 			if(!mobj.data){cout << "Could not open or find the image" <<endl; exit(-1);}
 			cout<<"OK!"<<endl;
@@ -228,7 +232,7 @@ int main( int argc, char* argv[] ) {
 	}else{
 		routes_path = argv[1];
 		if(!bf::exists(routes_path) or !routes_path.has_filename()) {cout<<"Wrong routes_path"<<endl; return -1;}
-		if(argc > 2) {hAngle = atof(argv[2]); if(hAngle > 114 or hAngle<=0) cout<<"Error: wrong hAngle "<<hAngle<<endl;}
+		if(argc > 2) {hAngle = atof(argv[2]); if(hAngle > 114 or hAngle<=0) {cout<<"Error: wrong hAngle "<<hAngle<<endl; return -1;}}
 		if(argc > 3) {results_file = argv[3]; results_file+=".yml";}
 		else results_file=routes_path.filename().native();
 		if(argc > 4) masks_dir = argv[4];
@@ -239,7 +243,7 @@ int main( int argc, char* argv[] ) {
 		if(argc > 9) room_length_dim = atof(argv[9]);
 		if(argc > 10) RPM = atof(argv[10]);
 		if(argc > 11) sensorHeight = atof(argv[11]);
-		if(argc > 12) {eAngle = atof(argv[12]); if(eAngle >= 55 or eAngle<0) cout<<"Error: wrong eAngle "<<eAngle<<endl; return -1;}
+		if(argc > 12) {eAngle = atof(argv[12]); if(eAngle >= 55 or eAngle<0) {cout<<"Error: wrong eAngle "<<eAngle<<endl; return -1;}}
 		if(argc > 13) imgSize.width = atoi(argv[13]);
 		if(argc == 15) imgSize.height = atoi(argv[14]);
 	}
