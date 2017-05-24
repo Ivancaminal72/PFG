@@ -202,21 +202,57 @@ int main( int argc, char* argv[] ) {
 	}
 
 	vector<Mat>::iterator it=video.begin();
+	//vector<Mat> videoMix;
+	int frame = 0;
 	for(;;){
 		imshow("image", (*it));
 		c = waitKey(0);
 		switch (c){
-			case 27:// esc
+			case 27:{// esc
+				/*if(videoMix.size()!=0){
+					vector<Mat>::iterator vit = videoMix.begin();
+					cv::Size frameSize = (*it).size();
+					bf::path save_path = "./mix/2und.AVI";
+					cout<<endl<<"Saving sequence "+save_path.native()<<endl;
+					VideoWriter writer1 = VideoWriter(save_path.native(),CV_FOURCC('M','P','4','3'),25,frameSize,true);
+					for(; vit!=videoMix.end(); vit++){
+						writer1.write(*vit);
+					}
+					cout<<"OK!"<<endl;
+				}*/
 				return 0;
+				}	
 			break;
 
-			case '+':
-				if(it!=video.end()--) it++;
+			case '+':{
+				if(it!=video.end()--) {
+					it++;
+					frame+=1;
+					cout<<frame<<" frame"<<endl;
+				}
+			}
 			break;
 
-			case '-':
-				if(it!=video.begin()) it--;
+			case '-':{
+				if(it!=video.begin()) {
+					it--;
+					frame-=1;
+					cout<<frame<<" frame"<<endl;
+				}
+			}
 			break;
+
+			/*case 'a':{
+				videoMix.push_back((*it).clone());
+				cout<<videoMix.size()<<" images"<<endl;
+			}
+			break;
+
+			case 'd':{
+				videoMix.pop_back();
+				cout<<videoMix.size()<<" images"<<endl;
+			}
+			break;*/
 		}
 	}
 }
