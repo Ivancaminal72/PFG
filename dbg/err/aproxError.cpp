@@ -29,8 +29,6 @@ bool box_drawed = false;
 
 
 Mat Image, temp;
-Mat croppedImage;
-Mat cpIbyn;
 Point ar_ori (-1,-1);
 Point ar_end (-1,-1);
 int nframe = -1;
@@ -40,14 +38,6 @@ struct TrayPoint{
 	Point pos2;
 	double dist;
 	float angle;
-};
-
-struct LabelProps{
-	int x;
-	int y;
-	int width;
-	int height;
-	double angle;
 };
 
 // dibujar rectangulo en la imagen
@@ -61,61 +51,19 @@ void draw_arrow (Mat img, Point pt1, Point pt2){
 	arrowedLine(img, pt1, pt2, Scalar(0,0,255), 1, 8, 0, 0.1);
 }
 
-bool saveValues(fstream& fd, vector<TrayPoint> vt){
-	cout<<"Saving...";
-
-	if(!fd.is_open()) return false;
-	
-	stringstream line;
-	line <<"persona"
-	<<" position_x"
-	<<" position_y"
-	<<" position2_x"
-	<<" position2_y"
-	<<" angle"
-	<<" dist";
-	
-	fd << line.str() <<endl;
-	line.str("");
-
-	//Write cascade objects
-	for (uint i=0; i<vt.size(); i++){
-		line <<"persona"<<i
-		<<" "<<vt.at(i).pos.x
-		<<" "<<vt.at(i).pos.y
-		<<" "<<vt.at(i).pos2.x
-		<<" "<<vt.at(i).pos2.y
-		<<" "<<vt.at(i).angle
-		<<" "<<vt.at(i).dist;
-	}
-
-	fd << line.str() <<endl;
-
-	cout<<"OK!"<<endl;
-	return true;
-}
-
-
 int main() {
 	int repetitions;
+	string save_path,video_path;
 	cout<<"How many repetitions?"<<endl;
 	cin>>repetitions;
 	if(repetitions < 2 ) {cout<<"Error: invalid repetitions"<<endl; return -1;}
+
+	cout<<"Video name?"<<endl;
+	cin>>video_path;
+	save_path = "./"+video_path+".csv";
+	video_path = "./"+video_path+".AVI";
+
 	box = cvRect(-1,-1,0,0);
-	string save_path = "./1ori.dat";
-	string video_path = "./1ori.AVI";
-
-	float deltax=0;
-	float deltay=0;
-	double theta1=0;
-
-	fstream fd(save_path.c_str(), std::ios::out | std::ios::app);
-
-	if (!fd.is_open()){
-		cout <<"Error opening file"<<endl;
-		return -1;
-	}
-
 	cout<<"abriendo video.."<<endl;
 
 	VideoCapture videoCap(video_path);
@@ -133,18 +81,13 @@ int main() {
 	bool drawingBoxes = true;
 	bool drawingArrows = false;
 
-	LabelProps obj;
 	TrayPoint t;
 
-	double tx [video.size()]; //array containing sum x component
-	double ty [video.size()]; //array containing sum y component
-	double ang [video.size()]; //array containing sum of angles
-	double med_tx [video.size()]; //array containing median of angles
-	double med_ty [video.size()]; //array containing median of angles
-	double med_ang [video.size()]; //array containing median of angles
-	double dev_tx [video.size()]; //array containing sum of angles
-	double dev_ty [video.size()]; //array containing sum of angles
-	double dev_ang [video.size()]; //array containing sum of angles
+	double tx [video.size()], ty [video.size()], dist [video.size()], ang [video.size()]; //arrays containing sum
+	double med_tx [video.size()], med_ty [video.size()], med_dist [video.size()], med_ang [video.size()]; //arrays containing median
+	double dev_tx [video.size()], dev_ty [video.size()], dev_dist [video.size()], dev_ang [video.size()]; //arrays containing deviation  
+	double theta1=0, tdev_tx=0, tdev_ty=0, tdev_dist=0, tmed_dist=0, tdev_ang=0;
+	float deltax=0, deltay=0;
 
 	vector<TrayPoint> vt[video.size()]; 
 
@@ -159,10 +102,8 @@ int main() {
 
 		char c = waitKey(1);
 		switch (c){
-			case 27:{
-				fd.close();
+			case 27: 
 				return 0;
-			}
 			break;
 
 
@@ -183,16 +124,9 @@ int main() {
 					setMouseCallback("image",NULL,NULL);
 					draw_box(Image,box);
 
-					//añadir rectangulo
-					obj.x = box.x;
-					obj.y = box.y;
-
-					obj.width = box.width;
-					obj.height = box.height;
-
 					//origen de la flecha -- centro del rectangulo
-					t.pos.x = obj.x + obj.width /2;
-					t.pos.y = obj.y + obj.height/2;
+					t.pos.x = (int) box.x + (int) box.width /2;
+					t.pos.y = (int) box.y + (int) box.height/2;
 
 					tx[index] += (double) t.pos.x;
 					ty[index] += (double) t.pos.y;
@@ -200,20 +134,22 @@ int main() {
 					
 					index +=1;
 					if(index == video.size()){index = 0; repet+=1;}
-					else setMouseCallback("image", my_mouse_callback_box );
 					Image = video.at(index).clone();
-
+					box_drawed=false;
 					if(repet == (uint) repetitions) {
-						setMouseCallback("image",NULL,NULL);
 						drawingBoxes=false; 
 						drawingArrows=true;
 						repet = 0;
-						setMouseCallback("image",my_mouse_callback_arrow);
 						drawing_arrow=true;
+						setMouseCallback("image",my_mouse_callback_arrow);
 						cout<<endl<<endl;
 						ar_ori.x = vt[index].at(repet).pos.x;
 						ar_ori.y = vt[index].at(repet).pos.y;
-					}
+						for(unsigned i=0; i<video.size(); i++){
+							med_ty[i]=ty[i]/repetitions;
+							med_tx[i]=tx[i]/repetitions;
+						}
+					}else setMouseCallback("image", my_mouse_callback_box );
 
 					cout<<"Doing: "<<index<<"/"<<video.size()-1<<" index  "<<repet<<"/"<<repetitions-1<<" repet"<<endl;
 				}
@@ -222,7 +158,7 @@ int main() {
 
 			
 			case 110:  //n
-				if(drawingArrows){
+				if(drawingArrows and arrow_drawed){
 					setMouseCallback("image",NULL,NULL);
 					draw_arrow(Image,ar_ori,ar_end);
 
@@ -243,19 +179,103 @@ int main() {
 
 					if(theta1 < 0 ) theta1=360-(-1*theta1);
 
-					//cout <<"angulo de la cabeza "<< round(theta1)<<endl;
+					ang[index] += round(theta1);
+					dist[index] += sqrt(pow((double)vt[index].at(repet).pos2.x-(double)vt[index].at(repet).pos.x,2)
+						+pow((double)vt[index].at(repet).pos2.y-(double)vt[index].at(repet).pos.y,2));
 
-					obj.angle = round(theta1);
-					vObj.push_back(obj);
+					vt[index].at(repet).pos2.x = ar_end.x;
+					vt[index].at(repet).pos2.y = ar_end.y;
+					vt[index].at(repet).angle = round(theta1);
+					vt[index].at(repet).dist = sqrt(pow((double)vt[index].at(repet).pos2.x-(double)vt[index].at(repet).pos.x,2)
+						+pow((double)vt[index].at(repet).pos2.y-(double)vt[index].at(repet).pos.y,2));
 
-					//guardar datos para las trayectorias
-					puntotray.pos = ar_ori;
-					puntotray.angle = round(theta1);
-					puntotray.frame = nframe;
-					cout<<"frame "<<nframe<<" label "<<vObj.size()<<" ok"<<endl;
-					setMouseCallback("image",NULL,NULL);
-					setMouseCallback("image", my_mouse_callback_box);
-					obj_done=true;
+					index +=1;
+					if(index == video.size()){index = 0; repet+=1;}
+					Image = video.at(index).clone();
+					arrow_drawed=false;
+					if(repet == (uint) repetitions) { //SAVE RESULTS
+						fstream fd(save_path.c_str(), std::ios::out | std::ios::trunc);
+						if (!fd.is_open()){cout <<"Error opening file"<<endl; return -1;}
+						cout<<endl<<endl;
+						stringstream line;
+						line <<"personX;"
+						<<"position_x;"
+						<<"position_y;"
+						<<"position2_x;"
+						<<"position2_y;"
+						<<"angles;"
+						<<"distance;";
+						fd << line.str() <<endl;
+						line.str("");
+						for(unsigned i=0; i<video.size(); i++){
+							for (unsigned j=0; j<(uint)repetitions; j++){
+								line <<"person"<<i
+								<<";"<<vt[i].at(j).pos.x
+								<<";"<<vt[i].at(j).pos.y
+								<<";"<<vt[i].at(j).pos2.x
+								<<";"<<vt[i].at(j).pos2.y
+								<<";"<<vt[i].at(j).angle
+								<<";"<<vt[i].at(j).dist;
+								fd << line.str() <<";"<<endl;
+								line.str("");
+							}
+							med_ang[i]=ang[i]/repetitions;
+							med_dist[i]=dist[i]/repetitions;
+						}
+						for(unsigned i=0; i<video.size(); i++){
+							for(unsigned j=0; j<(uint)repetitions; j++){
+								dev_ty[i]+=pow(vt[i].at(j).pos.y-med_ty[i],2);
+								dev_tx[i]+=pow(vt[i].at(j).pos.x-med_tx[i],2);
+								dev_ang[i]+=pow(vt[i].at(j).angle-med_ang[i],2);
+								dev_dist[i]+=pow(vt[i].at(j).dist-med_dist[i],2);
+							}
+						}
+						fd<<endl;
+						line <<"personX;"
+						<<"deviation_x;"
+						<<"deviation_y;"
+						<<"deviation_ang;"
+						<<"deviation_dist;"
+						<<"median_dist;";
+						fd << line.str() <<endl;
+						line.str("");
+						for(unsigned i=0; i<video.size(); i++){
+							dev_ty[i]=sqrt(dev_ty[i]/repetitions);
+							dev_tx[i]=sqrt(dev_tx[i]/repetitions);
+							dev_ang[i]=sqrt(dev_ang[i]/repetitions);
+							dev_dist[i]=sqrt(dev_dist[i]/repetitions);
+							line <<"person"<<i
+							<<";"<<dev_ty[i]
+							<<";"<<dev_tx[i]
+							<<";"<<dev_ang[i]
+							<<";"<<dev_dist[i]
+							<<";"<<med_dist[i];
+							fd << line.str() <<";"<<endl;
+							line.str("");
+							tdev_ty += dev_ty[i];
+							tdev_tx += dev_tx[i];
+							tdev_ang += dev_ang[i];
+							tdev_dist += dev_dist[i];
+							tmed_dist += med_dist[i];
+						}
+						tdev_ty = tdev_ty/video.size();
+						line <<"TOTAL"
+						<<";"<<tdev_ty/video.size()
+						<<";"<<tdev_tx/video.size()
+						<<";"<<tdev_ang/video.size()
+						<<";"<<tdev_dist/video.size()
+						<<";"<<tmed_dist/video.size();
+						fd << line.str() <<";"<<endl;
+						fd.close();
+						return 0;
+
+					}else{
+						drawing_arrow=true;
+						cout<<"Doing: "<<index<<"/"<<video.size()-1<<" index  "<<repet<<"/"<<repetitions-1<<" repet"<<endl;
+						setMouseCallback("image",my_mouse_callback_arrow);
+						ar_ori.x = med_tx[index];
+						ar_ori.y = med_ty[index];
+					}
 				}
 			break;
 		}

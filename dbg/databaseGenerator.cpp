@@ -35,8 +35,6 @@ bool box_drawed = false;
 
 
 Mat OriImage, ImageRect, ImageObj, Image,temp;
-Mat croppedImage;
-Mat cpIbyn;
 Point ar_ori (-1,-1);
 Point ar_end (-1,-1);
 
