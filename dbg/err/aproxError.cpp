@@ -34,8 +34,8 @@ Point ar_end (-1,-1);
 int nframe = -1;
 
 struct TrayPoint{
-	Point pos;
-	Point pos2;
+	Point2d pos;
+	Point2d pos2;
 	double dist;
 	float angle;
 };
@@ -49,6 +49,15 @@ void draw_box(Mat img, CvRect rect) {
 //dibujar angulo de la cabeza
 void draw_arrow (Mat img, Point pt1, Point pt2){
 	arrowedLine(img, pt1, pt2, Scalar(0,0,255), 1, 8, 0, 0.1);
+}
+
+string puntComa(string preu_punt){
+    std::size_t pos;
+    pos=preu_punt.find(".");
+    if(pos!=std::string::npos){
+        preu_punt.replace(pos,1,",");
+    }
+    return preu_punt;
 }
 
 int main() {
@@ -83,11 +92,11 @@ int main() {
 
 	TrayPoint t;
 
-	double tx [video.size()], ty [video.size()], dist [video.size()], ang [video.size()]; //arrays containing sum
+	double tx[video.size()]={0}, ty[video.size()]={0}, dist[video.size()]={0}, ang_x[video.size()]={0}, ang_y[video.size()]={0}; //arrays containing sum
 	double med_tx [video.size()], med_ty [video.size()], med_dist [video.size()], med_ang [video.size()]; //arrays containing median
-	double dev_tx [video.size()], dev_ty [video.size()], dev_dist [video.size()], dev_ang [video.size()]; //arrays containing deviation  
+	double dev_tx[video.size()]={0}, dev_ty[video.size()]={0}, dev_dist[video.size()]={0}, dev_ang [video.size()]={0}; //arrays containing deviation  
 	double theta1=0, tdev_tx=0, tdev_ty=0, tdev_dist=0, tmed_dist=0, tdev_ang=0;
-	float deltax=0, deltay=0;
+	float deltax, deltay;
 
 	vector<TrayPoint> vt[video.size()]; 
 
@@ -125,11 +134,11 @@ int main() {
 					draw_box(Image,box);
 
 					//origen de la flecha -- centro del rectangulo
-					t.pos.x = (int) box.x + (int) box.width /2;
-					t.pos.y = (int) box.y + (int) box.height/2;
+					t.pos.x = (double) (box.x + box.width/2);
+					t.pos.y = (double) (box.y + box.height/2);
 
-					tx[index] += (double) t.pos.x;
-					ty[index] += (double) t.pos.y;
+					tx[index] += t.pos.x;
+					ty[index] += t.pos.y;
 					vt[index].push_back(t);
 					
 					index +=1;
@@ -143,12 +152,12 @@ int main() {
 						drawing_arrow=true;
 						setMouseCallback("image",my_mouse_callback_arrow);
 						cout<<endl<<endl;
-						ar_ori.x = vt[index].at(repet).pos.x;
-						ar_ori.y = vt[index].at(repet).pos.y;
 						for(unsigned i=0; i<video.size(); i++){
-							med_ty[i]=ty[i]/repetitions;
 							med_tx[i]=tx[i]/repetitions;
+							med_ty[i]=ty[i]/repetitions;
 						}
+						ar_ori.x = (int) round(med_tx[index]);
+						ar_ori.y = (int) round(med_ty[index]);
 					}else setMouseCallback("image", my_mouse_callback_box );
 
 					cout<<"Doing: "<<index<<"/"<<video.size()-1<<" index  "<<repet<<"/"<<repetitions-1<<" repet"<<endl;
@@ -172,22 +181,22 @@ int main() {
 						else
 							theta1 = 270;
 					}else{
-						//param = (deltay/deltax);
 						theta1 = atan2(deltay,deltax) * (180.0 / PI);
 					}
 
 
 					if(theta1 < 0 ) theta1=360-(-1*theta1);
 
-					ang[index] += round(theta1);
-					dist[index] += sqrt(pow((double)vt[index].at(repet).pos2.x-(double)vt[index].at(repet).pos.x,2)
-						+pow((double)vt[index].at(repet).pos2.y-(double)vt[index].at(repet).pos.y,2));
-
-					vt[index].at(repet).pos2.x = ar_end.x;
-					vt[index].at(repet).pos2.y = ar_end.y;
+					vt[index].at(repet).pos2.x = (double) ar_end.x;
+					vt[index].at(repet).pos2.y = (double) ar_end.y;
 					vt[index].at(repet).angle = round(theta1);
-					vt[index].at(repet).dist = sqrt(pow((double)vt[index].at(repet).pos2.x-(double)vt[index].at(repet).pos.x,2)
-						+pow((double)vt[index].at(repet).pos2.y-(double)vt[index].at(repet).pos.y,2));
+					vt[index].at(repet).dist = sqrt(pow(vt[index].at(repet).pos2.x-vt[index].at(repet).pos.x,2.0)
+						+pow(vt[index].at(repet).pos2.y-vt[index].at(repet).pos.y,2.0));
+
+					ang_x[index] += cos(round(theta1)*PI/180);
+					ang_y[index] += sin(round(theta1)*PI/180);
+					dist[index] += sqrt(pow(vt[index].at(repet).pos2.x-vt[index].at(repet).pos.x,2.0)
+						+pow(vt[index].at(repet).pos2.y-vt[index].at(repet).pos.y,2.0));
 
 					index +=1;
 					if(index == video.size()){index = 0; repet+=1;}
@@ -209,63 +218,72 @@ int main() {
 						line.str("");
 						for(unsigned i=0; i<video.size(); i++){
 							for (unsigned j=0; j<(uint)repetitions; j++){
-								line <<"person"<<i
-								<<";"<<vt[i].at(j).pos.x
-								<<";"<<vt[i].at(j).pos.y
-								<<";"<<vt[i].at(j).pos2.x
-								<<";"<<vt[i].at(j).pos2.y
-								<<";"<<vt[i].at(j).angle
-								<<";"<<vt[i].at(j).dist;
-								fd << line.str() <<";"<<endl;
-								line.str("");
+								fd <<"person"<<i
+								<<";"<<puntComa(to_string(vt[i].at(j).pos.x)) 
+								<<";"<<puntComa(to_string(vt[i].at(j).pos.y))
+								<<";"<<puntComa(to_string(vt[i].at(j).pos2.x))
+								<<";"<<puntComa(to_string(vt[i].at(j).pos2.y))
+								<<";"<<puntComa(to_string(vt[i].at(j).angle))
+								<<";"<<puntComa(to_string(vt[i].at(j).dist))
+								<<";"<<endl;
 							}
-							med_ang[i]=ang[i]/repetitions;
+							med_ang[i]=atan(ang_y[i]/ang_x[i])*180/PI;
+							if(ang_x[i]<0) med_ang[i]+=180;
+							else if(ang_y[i]<0) med_ang[i]+=360;
 							med_dist[i]=dist[i]/repetitions;
 						}
 						for(unsigned i=0; i<video.size(); i++){
 							for(unsigned j=0; j<(uint)repetitions; j++){
-								dev_ty[i]+=pow(vt[i].at(j).pos.y-med_ty[i],2);
-								dev_tx[i]+=pow(vt[i].at(j).pos.x-med_tx[i],2);
-								dev_ang[i]+=pow(vt[i].at(j).angle-med_ang[i],2);
-								dev_dist[i]+=pow(vt[i].at(j).dist-med_dist[i],2);
+								dev_ty[i]+=pow(vt[i].at(j).pos.y-med_ty[i],2.0);
+								dev_tx[i]+=pow(vt[i].at(j).pos.x-med_tx[i],2.0);
+								dev_ang[i]+=(180.0 - abs(fmod(abs(vt[i].at(j).angle - med_ang[i]), 360.0) - 180.0));
+								dev_dist[i]+=pow(vt[i].at(j).dist-med_dist[i],2.0);
 							}
 						}
 						fd<<endl;
 						line <<"personX;"
+						<<"median_x;"
 						<<"deviation_x;"
+						<<"median_y;"
 						<<"deviation_y;"
+						<<"median_ang;"
 						<<"deviation_ang;"
-						<<"deviation_dist;"
-						<<"median_dist;";
+						<<"median_dist;"
+						<<"deviation_dist;";
 						fd << line.str() <<endl;
 						line.str("");
 						for(unsigned i=0; i<video.size(); i++){
 							dev_ty[i]=sqrt(dev_ty[i]/repetitions);
 							dev_tx[i]=sqrt(dev_tx[i]/repetitions);
-							dev_ang[i]=sqrt(dev_ang[i]/repetitions);
+							dev_ang[i]=dev_ang[i]/repetitions;
 							dev_dist[i]=sqrt(dev_dist[i]/repetitions);
-							line <<"person"<<i
-							<<";"<<dev_ty[i]
-							<<";"<<dev_tx[i]
-							<<";"<<dev_ang[i]
-							<<";"<<dev_dist[i]
-							<<";"<<med_dist[i];
-							fd << line.str() <<";"<<endl;
-							line.str("");
-							tdev_ty += dev_ty[i];
+							fd <<"person"<<i
+							<<";"<<puntComa(to_string(med_tx[i]))
+							<<";"<<puntComa(to_string(dev_tx[i]))
+							<<";"<<puntComa(to_string(med_ty[i]))
+							<<";"<<puntComa(to_string(dev_ty[i]))
+							<<";"<<puntComa(to_string(med_ang[i]))
+							<<";"<<puntComa(to_string(dev_ang[i]))
+							<<";"<<puntComa(to_string(med_dist[i]))
+							<<";"<<puntComa(to_string(dev_dist[i]))
+							<<";"<<endl;
+
 							tdev_tx += dev_tx[i];
+							tdev_ty += dev_ty[i];
 							tdev_ang += dev_ang[i];
 							tdev_dist += dev_dist[i];
 							tmed_dist += med_dist[i];
 						}
-						tdev_ty = tdev_ty/video.size();
-						line <<"TOTAL"
-						<<";"<<tdev_ty/video.size()
-						<<";"<<tdev_tx/video.size()
-						<<";"<<tdev_ang/video.size()
-						<<";"<<tdev_dist/video.size()
-						<<";"<<tmed_dist/video.size();
-						fd << line.str() <<";"<<endl;
+						fd <<"TOTAL"
+						<<";"
+						<<";"<<puntComa(to_string(tdev_tx/video.size()))
+						<<";"
+						<<";"<<puntComa(to_string(tdev_ty/video.size()))
+						<<";"
+						<<";"<<puntComa(to_string(tdev_ang/video.size()))
+						<<";"<<puntComa(to_string(tmed_dist/video.size()))
+						<<";"<<puntComa(to_string(tdev_dist/video.size()))
+						<<";"<<endl;
 						fd.close();
 						return 0;
 
@@ -273,8 +291,8 @@ int main() {
 						drawing_arrow=true;
 						cout<<"Doing: "<<index<<"/"<<video.size()-1<<" index  "<<repet<<"/"<<repetitions-1<<" repet"<<endl;
 						setMouseCallback("image",my_mouse_callback_arrow);
-						ar_ori.x = med_tx[index];
-						ar_ori.y = med_ty[index];
+						ar_ori.x = (int) round(med_tx[index]);
+						ar_ori.y = (int) round(med_ty[index]);
 					}
 				}
 			break;
