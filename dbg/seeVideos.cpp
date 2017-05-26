@@ -194,7 +194,7 @@ int main( int argc, char* argv[] ) {
 		err_y=err_y/count;
 		err_a=err_a/count;
 		
-		cout<<"Average error between routes: "<<endl;
+		cout<<"Average distances: "<<endl;
 		printf ("Point_x: %g \n", err_x);
 		printf ("Point_y: %g \n", err_y);
 		printf ("Angles: %g \n", err_a);
