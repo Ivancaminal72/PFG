@@ -206,8 +206,8 @@ int main( int argc, char* argv[] ) {
 	char op;
 	Mat img;
 
-	if (argc < 2 || argc > 5) {//wrong arguments
-		cout<<"USAGE:"<<endl<< "AddVideos sequence_name [pack_name] [dir_save/] [dir_videos/] [dir_packs/]"<<endl<<endl;
+	if (argc < 2 || argc > 6) {//wrong arguments
+		cout<<"USAGE:"<<endl<< "./addVideos sequence_name [pack_name] [dir_save/] [dir_videos/] [dir_packs/]"<<endl<<endl;
 		cout<<"DEFAULT [pack_name] = sequence_name"<<endl;
 		cout<<"DEFAULT [dir_save/] = "<<seq_dir<<endl;
 		cout<<"DEFAULT [dir_videos/] = "<<vid_dir<<endl;

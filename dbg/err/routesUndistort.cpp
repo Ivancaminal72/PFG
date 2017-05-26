@@ -53,7 +53,7 @@ bool verifyDir(bf::path dir, bool doCreation){
 	return false;
 }
 
-bool loadRoutes(bf::path loadRoutesPath, Mat cameraMatrix1, Mat cameraMatrix2, Mat distCoeffs, Size s){
+bool loadRoutes(bf::path loadRoutesPath, Mat cameraMatrix, Mat distCoeffs, Size s){
 	Mat mOri(1,1,CV_64FC2), mUnd(1,1,CV_64FC2), eye;
 	int num_routes=-1;
 	cout<<endl<<"Loading Routes ";
@@ -86,10 +86,10 @@ bool loadRoutes(bf::path loadRoutesPath, Mat cameraMatrix1, Mat cameraMatrix2, M
 					mOri.at<Vec2d> (0,0)[0] = (double) nodePoint[0];
 					mOri.at<Vec2d> (0,0)[1] = (double) nodePoint[1];
 					//cout<<"ori:"<<mOri.at<Vec2d> (0,0)[0]<<endl;
-					cv::undistortPoints(mOri, mUnd, cameraMatrix1, distCoeffs, eye,cameraMatrix2);
+					cv::undistortPoints(mOri, mUnd, cameraMatrix, distCoeffs, eye, cameraMatrix);
 					//cout<<"und:"<<mUnd.at<Vec2d> (0,0)[0]<<endl;
-					actPoint.x = round(mUnd.at<Vec2d> (0,0)[0]);
-					actPoint.y = round(mUnd.at<Vec2d> (0,0)[1]);
+					actPoint.x = (int) mUnd.at<Vec2d> (0,0)[0];
+					actPoint.y = (int) mUnd.at<Vec2d> (0,0)[1];
 					//cout<<"act:"<<actPoint.x<<endl;
 					ptray.Pos=actPoint;
 					if(actPoint.x<0 or actPoint.x>s.width-1 or actPoint.y<0 or actPoint.y>s.height-1) continue;
@@ -281,7 +281,7 @@ int main( int argc, char* argv[] ) {
 	vector<Mat>::iterator vit = video.begin();
 	cv::Size frameSize = (*vit).size();
 
-	if(!loadRoutes(routes_path, cameraMatrix, cameraMatrix, distCoeffs,frameSize)) {cout<<"Error: loading routes"<<endl; return -1;}
+	if(!loadRoutes(routes_path, cameraMatrix, distCoeffs,frameSize)) {cout<<"Error: loading routes"<<endl; return -1;}
 	//if(!loadCascadeAngles(angles_path,seq_name)) {cout<<"Error: loading angles"<<endl; return -1;}
 	//if(!loadCascadeAngles(cascades_path,seq_name)) {cout<<"Error: loading cascades"<<endl; return -1;}
 
