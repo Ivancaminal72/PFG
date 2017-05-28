@@ -137,11 +137,11 @@ int main( int argc, char** argv ){
     img0.copyTo(img);
     cvtColor(img, imgGray, COLOR_BGR2GRAY);
     if(argc > 6) {
-    	if(!bf::exists(oriImgPath.native())) {cout<<"Error: "<<oriImgPath.native()<<" doesn't exist"<<endl; return -1;}
+    	if(!bf::exists(oriImgPath) or !oriImgPath.has_filename()) {cout<<"Error: "<<oriImgPath.native()<<" doesn't exist"<<endl; return -1;}
 		markerMask = imread(oriImgPath.native(), CV_LOAD_IMAGE_GRAYSCALE);
 		if(!markerMask.data){cout << "Could not open or find the image" <<endl; return -1;}
 		if(argc == 8){// Read the calibration values and undistort
-			if(!bf::exists(calibPath.native())) {cout<<"Error: "<<calibPath.native()<<" doesn't exist"<<endl; return -1;}
+			if(!bf::exists(calibPath) or !calibPath.has_filename()) {cout<<"Error: "<<calibPath.native()<<" doesn't exist"<<endl; return -1;}
 			FileStorage fs(calibPath.native(), FileStorage::READ); 
 			if (!fs.isOpened()){cout<<"Error: "<<calibPath.native()<<" doesn't exist"<<endl; return -1;}
 			fs["Camera_Matrix"] >> cameraMatrix;

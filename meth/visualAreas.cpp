@@ -585,7 +585,7 @@ int main( int argc, char* argv[] ) {
 	imshow("image", mTotalFloor);
 	waitKey(0);*/
 
-	//9-Save mFloor
+	//9-Save results
 	char op;
 	cout<<"Do you want to save result? [y/n]"<<endl;
 	cin>>op;
