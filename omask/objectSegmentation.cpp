@@ -99,11 +99,12 @@ bool verifyDir(bf::path dir, bool doCreation){
 
 int main( int argc, char** argv ){
     string imgPath, mask_name, group_mask;
-    bf::path savePath, savePath_c;
+    bf::path savePath, savePath_c, oriImgPath, calibPath;
+    Mat distCoeffs, cameraMatrix;
     float objHeight, sensorHeight = 3.07, RPM = 172.9729;
-    if(argc < 4 || argc > 6) {
+    if(argc < 4 || argc > 8) {
         cout<<"USAGE:"<<endl<< "./objectSegmentation image_path mask_name object_height [sensor_height]"<<endl<<
-        	" [relation_pixel_meter]"<<endl<<endl;
+        	" [relation_pixel_meter] [original_mask_path] [calibration_path]"<<endl<<endl;
         cout<<"DEFAULT [sensor_height] = "<<sensorHeight<<"m"<<endl;
         cout<<"DEFAULT [relation_pixel_meter] = "<<RPM<<"pixels/meter"<<endl;
         return -1;
@@ -112,7 +113,9 @@ int main( int argc, char** argv ){
          mask_name = argv[2];
          objHeight = atof(argv[3]);
          if(argc > 4) sensorHeight = atof(argv[4]);
-         if(argc == 6) RPM = atof(argv[5]);
+         if(argc > 5) RPM = atof(argv[5]);
+         if(argc > 6) oriImgPath = argv[6];
+         if(argc == 8) calibPath = argv[7];
          sensorHeight *= RPM;
          objHeight *= RPM;
          size_t pos_point = imgPath.find_last_of(".",string::npos);
@@ -133,17 +136,43 @@ int main( int argc, char** argv ){
     cv::Size imgSize = img0.size();
     img0.copyTo(img);
     cvtColor(img, imgGray, COLOR_BGR2GRAY);
-    markerMask = Mat::zeros(imgSize, CV_8UC1);
-    imgt=img.clone();
-    putText(imgt, strBgr, Point2f(350,470), FONT_HERSHEY_PLAIN, 2,  Scalar(0,0,255,255));
-    imshow( "image", imgt );
-    setMouseCallback( "image", onMouse, 0 );
-    float ii=0, resp=round(pow(1.4,ii));
-    while(resp<=255){
-    	vexp.push_back((unsigned char)resp);
-    	ii+=1;
-    	resp=round(pow(1.4,ii));
+    if(argc > 6) {
+    	if(!bf::exists(oriImgPath.native())) {cout<<"Error: "<<oriImgPath.native()<<" doesn't exist"<<endl; return -1;}
+		markerMask = imread(oriImgPath.native(), CV_LOAD_IMAGE_GRAYSCALE);
+		if(!markerMask.data){cout << "Could not open or find the image" <<endl; return -1;}
+		if(argc == 8){// Read the calibration values and undistort
+			if(!bf::exists(calibPath.native())) {cout<<"Error: "<<calibPath.native()<<" doesn't exist"<<endl; return -1;}
+			FileStorage fs(calibPath.native(), FileStorage::READ); 
+			if (!fs.isOpened()){cout<<"Error: "<<calibPath.native()<<" doesn't exist"<<endl; return -1;}
+			fs["Camera_Matrix"] >> cameraMatrix;
+			fs["Distortion_Coefficients"] >> distCoeffs;
+			fs.release();
+			undistort(markerMask.clone(), markerMask, cameraMatrix, distCoeffs);
+			threshold(markerMask.clone(), markerMask, 128, 255, THRESH_BINARY);
+		}
+		vector<Mat> vimg;
+		split(img, vimg);
+		bitwise_or(vimg[0].clone(), markerMask, vimg[0]);
+		bitwise_or(vimg[1].clone(), markerMask, vimg[1]);
+		bitwise_or(vimg[2].clone(), markerMask, vimg[2]);
+		merge(vimg, img);
+		imgt=img.clone();
+		putText(imgt, strFin, Point2f(250,470), FONT_HERSHEY_PLAIN, 2,  Scalar(255,0,0,255));
+		manual=true;
     }
+    else {
+    	imgt=img.clone();
+    	putText(imgt, strBgr, Point2f(350,470), FONT_HERSHEY_PLAIN, 2,  Scalar(0,0,255,255));
+    	markerMask = Mat::zeros(imgSize, CV_8UC1);
+    }
+    float ii=0, resp=round(pow(1.4,ii));
+	while(resp<=255){
+		vexp.push_back((unsigned char)resp);
+		ii+=1;
+		resp=round(pow(1.4,ii));
+	}
+    imshow( "image", imgt);
+    setMouseCallback( "image", onMouse, 0 );
 
     for(;;){
         c = waitKey(0);
@@ -180,7 +209,7 @@ int main( int argc, char** argv ){
 		}
 
 		if( ((char)c == ' ') ){
-			if(!manual){
+			if(!manual and bgrDrawed and objDrawed){
 				int i, j, compCount = 0;
 				findContours(markerMask, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
 				if( contours.size() > 2){
