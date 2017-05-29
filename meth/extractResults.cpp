@@ -130,7 +130,7 @@ int main( int argc, char* argv[] ) {
 	Obj o;
 	vector<Obj> vobj;
 	vector<Obj>::iterator oit;
-	Mat mobj, mTotal;
+	Mat mobj, mTotal = Mat::zeros(imgSize, CV_8UC1);
 	while(addObjectMask(mobj, masks_dir, o.name)){
 		if(mobj.size() != imgSize){cout<<"Error: routes image size is different from "<<o.name<<" mask size"<<endl; return -1;}
 		mTotal+=mobj;
@@ -140,7 +140,7 @@ int main( int argc, char* argv[] ) {
 		vobj.push_back(o);
 	}
 	/*//Logging
-	imshow("image", mTotalFloor);
+	imshow("image", mTotal);
 	waitKey(0);*/
 
 	//Load matrix

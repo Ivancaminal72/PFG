@@ -472,7 +472,7 @@ int main( int argc, char* argv[] ) {
 
 		if(it==rutas.begin()){//Logging
 			imshow("image", mFloor);
-			waitKey(0);
+			waitKey(5);
 		}
 
 
