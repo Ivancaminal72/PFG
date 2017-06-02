@@ -308,7 +308,7 @@ int main( int argc, char* argv[] ) {
 			fs << "RPM" << RPM;
 			fs << "sensor_height" << sensorHeight;
 			fs << "person_height" << persHeight;
-			fs << "filter_angle" << fAngle*180/M_PI*2 - eAngle*180/M_PI;
+			fs << "filter_angle" << (fAngle*180/M_PI - eAngle*180/M_PI)*2;
 			fs << "error_angle" << eAngle*180/M_PI;
 			fs << "imgSize" << imgSize;
 			fs << "number_objects" << (int) vobj.size();
