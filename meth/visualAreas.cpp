@@ -232,7 +232,7 @@ int main( int argc, char* argv[] ) {
 	}else{
 		routes_path = argv[1];
 		if(!bf::exists(routes_path) or !routes_path.has_filename()) {cout<<"Wrong routes_path"<<endl; return -1;}
-		if(argc > 2) {hAngle = atof(argv[2]); if(hAngle > 114 or hAngle<=0) {cout<<"Error: wrong hAngle "<<hAngle<<endl; return -1;}}
+		if(argc > 2) {hAngle = atof(argv[2]); if(hAngle > 114 or hAngle<0) {cout<<"Error: wrong hAngle "<<hAngle<<endl; return -1;}}
 		if(argc > 3) {results_file = argv[3]; results_file+=".yml";}
 		else results_file=routes_path.filename().native();
 		if(argc > 4) masks_dir = argv[4];
@@ -246,6 +246,7 @@ int main( int argc, char* argv[] ) {
 		if(argc > 12) {eAngle = atof(argv[12]); if(eAngle >= 55 or eAngle<0) {cout<<"Error: wrong eAngle "<<eAngle<<endl; return -1;}}
 		if(argc > 13) imgSize.width = atoi(argv[13]);
 		if(argc == 15) imgSize.height = atoi(argv[14]);
+		if(hAngle == 0 and eAngle ==0) {cout<<"Error: both eAngle and hAngle are zero"<<endl; return -1;}
 	}
 
 	//Verify and create correct directories
@@ -265,7 +266,7 @@ int main( int argc, char* argv[] ) {
 	Point camCoor(round(5.35*RPM-imgSize.width/2),round(3.77*RPM-imgSize.height/2));//Point camCoor(3,2);
 
 	/****Obtain object masks****/
-	struct Obj{Mat mask; string name; double punctuation;};
+	struct Obj{Mat mask; string name; double punctuation; double punctuation2;};
 	Obj o;
 	vector<Obj> vobj;
 	vector<Obj>::iterator oit;
@@ -594,8 +595,8 @@ int main( int argc, char* argv[] ) {
 		cin>>op;
 	}
 	if(op == 'y'){
-		char buffer [50]; 
-		double totalP=0;
+		char buffer [50];
+		double totalP=0, totalP2=0;
 		cout<<endl<<"Saving Results ";
 		FileStorage fs;
 		cout<<save_dir.native()+results_file<<endl;
@@ -616,20 +617,22 @@ int main( int argc, char* argv[] ) {
 				mFloor = Mat::zeros(roomSize, CV_64F);
 				mTotalFloor.copyTo(mFloor,oit->mask);
 				oit->punctuation = sum(mFloor)[0];
+				oit->punctuation2 = (double) sum(mFloor)[0]/ (double) countNonZero(mFloor);
 				totalP += oit->punctuation;
+				totalP2 += oit->punctuation2;
 			}
 
 			for(oit=vobj.begin(); oit!=vobj.end(); oit++){
-				sprintf (buffer,"%.2f", oit->punctuation/totalP);
-				fs << "{:" << "punctuation_n" << buffer << "name" << oit->name 
-				<< "punctuation_f" << oit->punctuation 
-				<< "punctuation_fn" << oit->punctuation/totalP << "}";
+				sprintf (buffer,"%.2f", oit->punctuation2/totalP2);
+				fs << "{:" << "punctuation2_n" << buffer << "name" << oit->name 
+				<< "punctuation_fn" << oit->punctuation/totalP 
+				<< "punctuation2_fn" << oit->punctuation2/totalP2 << "}";
 				
 				cout<<buffer<<" "<<oit->name<<endl;
 			}
 			fs << "]";
 			fs << "totalPunctuation"<<totalP;
-			fs << "mTotalFloor"<<mTotalFloor;
+			//fs << "mTotalFloor"<<mTotalFloor;
 			fs.release();
 			cout<<"OK!"<<endl;
 		}else{

@@ -126,7 +126,7 @@ int main( int argc, char* argv[] ) {
 	if(!verifyDir(save_dir,true)) return -1;
 
 	/****Obtain object masks****/
-	struct Obj{Mat mask; string name; double punctuation;};
+	struct Obj{Mat mask; string name; double punctuation; double punctuation2;};
 	Obj o;
 	vector<Obj> vobj;
 	vector<Obj>::iterator oit;
@@ -163,7 +163,7 @@ int main( int argc, char* argv[] ) {
 	}
 	if(op == 'y'){
 		char buffer [50]; 
-		double totalP=0;
+		double totalP=0, totalP2=0;
 		cout<<endl<<"Saving Results ";
 		FileStorage fs;
 		cout<<save_dir.native()+results_file<<endl;
@@ -177,20 +177,21 @@ int main( int argc, char* argv[] ) {
 				mobj = Mat::zeros(imgSize, CV_64F);
 				mTotal.copyTo(mobj,oit->mask);
 				oit->punctuation = sum(mobj)[0];
+				oit->punctuation2 = (double) sum(mobj)[0]/ (double) countNonZero(mobj);
 				totalP += oit->punctuation;
+				totalP2 += oit->punctuation2;
 			}
 
 			for(oit=vobj.begin(); oit!=vobj.end(); oit++){
-				sprintf (buffer,"%.2f", oit->punctuation/totalP);
-				fs << "{:" << "punctuation_n" << buffer << "name" << oit->name 
-				<< "punctuation_f" << oit->punctuation 
-				<< "punctuation_fn" << oit->punctuation/totalP << "}";
-				
+				sprintf (buffer,"%.2f", oit->punctuation2/totalP2);
+				fs << "{:" << "punctuation2_n" << buffer << "name" << oit->name 
+				<< "punctuation_fn" << oit->punctuation/totalP 
+				<< "punctuation2_fn" << oit->punctuation2/totalP2 << "}";
 				cout<<buffer<<" "<<oit->name<<endl;
 			}
 			fs << "]";
 			fs << "totalPunctuation"<<totalP;
-			fs << "mTotalFloor"<<mTotal;
+			//fs << "mTotalFloor"<<mTotal;
 			fs.release();
 			cout<<"OK!"<<endl;
 		}else{

@@ -174,13 +174,14 @@ int main( int argc, char* argv[] ) {
 		else results_file=routes_path.filename().native();
 		if(argc > 3) save_dir = argv[3];
 		if(argc > 4) masks_dir = argv[4];
-		if(argc > 5) {fAngle = atof(argv[5]); if(fAngle > 114 or fAngle<=0) {cout<<"Error: wrong fAngle "<<fAngle<<endl; return -1;}}
+		if(argc > 5) {fAngle = atof(argv[5]); if(fAngle > 114 or fAngle<0) {cout<<"Error: wrong fAngle "<<fAngle<<endl; return -1;}}
 		if(argc > 6) persHeight = atof(argv[6]);
 		if(argc > 7) sensorHeight = atof(argv[7]);
 		if(argc > 8) RPM = atof(argv[8]);
 		if(argc > 9) {eAngle = atof(argv[9]); if(eAngle >= 55 or eAngle<0) {cout<<"Error: wrong eAngle "<<eAngle<<endl; return -1;}}
 		if(argc > 10) imgSize.width = atoi(argv[10]);
 		if(argc == 12) imgSize.height = atoi(argv[11]);
+		if(fAngle == 0 and eAngle ==0) {cout<<"Error: both eAngle and fAngle are zero"<<endl; return -1;}
 	}
 
 	//Verify and create correct directories
