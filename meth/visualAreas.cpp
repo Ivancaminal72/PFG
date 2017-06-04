@@ -288,7 +288,7 @@ int main( int argc, char* argv[] ) {
 
 	//Declare variables
 	int lim1,lim2,cor1,cor2,cor3,cor4,markPxFloor;
-	double tAngle, dist, wFloor, wWalls, wCeiling, aFloor, aWalls, aCeiling;
+	double tAngle, dist, wFloor, aFloor, wWalls, wCeiling, aWalls, aCeiling;
 	Point2d tpos, ori, prev, act, plim1, plim2, plim3;  //2 dimensions <double> precission
 	Point pver1, pver2, pver3, pver4;
 	vector<Point> vpts, vpts2;
@@ -323,7 +323,7 @@ int main( int argc, char* argv[] ) {
 			cout<<"Error tpos is out of image bounds"<<endl;
 			return -1;
 		}
-		cout<<"it->pos: "<<tpos<<endl;
+		//Logging: cout<<"it->pos: "<<tpos<<endl;
 
 		//1-Correction of tpos real position
 		tpos.x-= imgSize.width/2;
@@ -333,10 +333,10 @@ int main( int argc, char* argv[] ) {
 		tpos.y+= imgSize.height/2;
 
 		//2-Move tpos from sensor to room coordinates
-		cout<<"camCoor: "<<camCoor<<" it->pos: "<<tpos<<endl;
+		//Logging: cout<<"camCoor: "<<camCoor<<" it->pos: "<<tpos<<endl;
 		tpos.x += camCoor.x;
 		tpos.y += camCoor.y;
-		cout<<"tpos: "<<tpos<<endl;
+		//Logging: cout<<"tpos: "<<tpos<<endl;
 		vpts.push_back(Point(round(tpos.x),round(tpos.y)));
 		mR = (Mat_<double>(2,2)<<cos(tAngle),-sin(tAngle),sin(tAngle),cos(tAngle));
 
@@ -490,7 +490,7 @@ int main( int argc, char* argv[] ) {
 		cout<<markPxFloor<<endl;*/
 
 		//--------------find tpos-bounds intersections--------------//
-		cout<<"tAngle: "<<tAngle<<endl;
+		//Logging: cout<<"tAngle: "<<tAngle<<endl;
 		if(findIntersection(plim3, tpos, Point2d(tpos.x+1,tpos.y-tan(tAngle)), pver1, pver2)) vplim3.push_back(plim3);
 		if(findIntersection(plim3, tpos, Point2d(tpos.x+1,tpos.y-tan(tAngle)), pver2, pver3)) vplim3.push_back(plim3);
 		if(findIntersection(plim3, tpos, Point2d(tpos.x+1,tpos.y-tan(tAngle)), pver3, pver4)) vplim3.push_back(plim3);
@@ -516,11 +516,12 @@ int main( int argc, char* argv[] ) {
 
 		it3 = vplim3.begin();
 
+		/*Logging
 		cout<<"vplim3: ";
 		for(; it3!=vplim3.end(); it3++){
 			cout<<(*it3)<<" ,";
 		}
-		cout<<endl;
+		cout<<endl;*/
 		it3 = vplim3.begin();
 
 
@@ -555,10 +556,10 @@ int main( int argc, char* argv[] ) {
 		}
 		
 		//--------------calculate ecliudean distance--------------//
-		cout<<"plim3: "<<plim3<<" tpos: "<<tpos<<endl;
+		//Logging: cout<<"plim3: "<<plim3<<" tpos: "<<tpos<<endl;
 		dist = sqrt(pow(plim3.x-tpos.x,2)+pow(plim3.y-tpos.y,2));
 
-		cout<<"Dist: "<<dist<<endl;
+		//Logging: cout<<"Dist: "<<dist<<endl;
 		//--------------calculate weights-------------------------//
 		aFloor = atan(dist/persEyesHeight);
 		aCeiling = atan(dist/(roomHeight-persEyesHeight));
