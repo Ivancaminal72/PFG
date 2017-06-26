@@ -6,8 +6,6 @@
 #include <sstream>
 #include <fstream>
 #include <string>
-#include <dirent.h>
-#include <math.h>
 #include <boost/filesystem.hpp>
 
 #define PI 3.14159265

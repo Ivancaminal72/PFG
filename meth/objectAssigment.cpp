@@ -7,8 +7,6 @@
 #include <sstream>
 #include <fstream>
 #include <string>
-#include <dirent.h>
-#include <math.h>
 #include <boost/filesystem.hpp>
 
 using namespace cv;

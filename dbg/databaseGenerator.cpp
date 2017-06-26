@@ -1,9 +1,3 @@
-/*
- * Pgrogram to generate image databases
- *
- *
-*/
-
 #include "opencv2/opencv.hpp"
 #include <cmath>
 #include "opencv/cv.h"
@@ -12,8 +6,6 @@
 #include <sstream>
 #include <fstream>
 #include <string>
-#include <dirent.h>
-#include <math.h>
 #include <boost/filesystem.hpp>
 
 #define PI 3.14159265
@@ -293,7 +285,7 @@ int main( int argc, char* argv[] ) {
 	float deltay=0;
 	double theta1=0;
 
-	/*
+	/* #include <dirent.h> //old version
 	//contar imagenes del directorio de imagenes
 	int cimagesp = 0;
 	//Con un puntero a DIR abriremos el directorio

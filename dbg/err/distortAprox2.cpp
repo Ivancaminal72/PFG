@@ -6,7 +6,6 @@
 #include <sstream>
 #include <fstream>
 #include <string>
-#include <dirent.h>
 #include <math.h>
 #include <boost/filesystem.hpp>
 
@@ -195,7 +194,7 @@ int main( int argc, char* argv[] ) {
 	cout<<"Average error between routes: "<<endl;
 	printf ("Original_vs_Calib1-> Median: %g Deviation: %g \n", med_dist_ou, dev_dist_ou);
 	if(argc == max_argc){
-		printf ("Original_vs_Calib1-> Median: %g Deviation: %g \n", med_dist_ou2, dev_dist_ou2);
+		printf ("Original_vs_Calib2-> Median: %g Deviation: %g \n", med_dist_ou2, dev_dist_ou2);
 		printf ("Calib1__vs__Calib2-> Median: %g Deviation: %g \n", med_dist_uu2, dev_dist_uu2);
 	}
 }
